@@ -6,8 +6,11 @@
 #include <QMessageBox>
 #include <QImage>
 #include <QPixmap>
-#include "mainwindow.h"
+#include <vector>
+#include "mainwindow.hpp"
 #include "ui_mainwindow.h"
+#include "filterneuron.hpp"
+#include "filternet.hpp"
 
 #define FILTERH 12
 #define FILTERW 12
@@ -18,14 +21,14 @@ using namespace std;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    , ui(new Ui::MainWindow),
+      filterNetwork(FILTERS, FILTERH, FILTERW, FILTERG)
 {
     ui->setupUi(this);
     QObject::connect(this, SIGNAL(showJPEG(const QImage&)),
                      this, SLOT(updateJPEG(const QImage&)));
     qGS = new QGraphicsScene();
     ui->graphicsView->setScene(qGS);
-
 
 }
 
@@ -59,6 +62,10 @@ void MainWindow::processLine(const QString& lineIn)
             vector<int> imgGrid;
             for (int i = -FILTERG/2; i < FILTERG/2; i++) {
                 for (int j = -FILTERG/2 ; j < FILTERG/2; j++) {
+                    if ((x + i) < 0 || (y + j) < 0) {
+                        imgGrid.push_back(0);
+                        continue;
+                    }
                     QRgb colImg = squareImage.pixel(x + i, y + j);
                     imgGrid.push_back(qGray(colImg));
                 }
@@ -66,6 +73,8 @@ void MainWindow::processLine(const QString& lineIn)
             imageMap.push_back(imgGrid);
         }
     }
+
+
 
 }
 

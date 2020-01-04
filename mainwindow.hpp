@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QGraphicsScene>
+#include <filternet.hpp>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -28,6 +29,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QGraphicsScene *qGS;
+    FilterNet filterNetwork;
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;

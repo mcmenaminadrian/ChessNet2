@@ -1,5 +1,5 @@
 #include <QGraphicsScene>
-#include "mainwindow.h"
+#include "mainwindow.hpp"
 
 #include <QApplication>
 
