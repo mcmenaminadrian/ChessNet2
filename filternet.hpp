@@ -8,6 +8,7 @@ class FilterNet
 {
 public:
     FilterNet(const int c, const int h, const int w, const int g);
+    void consume(const int filter, const int x, const int y, const int value);
 
 private:
     const int count;

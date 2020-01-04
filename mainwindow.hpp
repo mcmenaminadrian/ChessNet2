@@ -33,5 +33,7 @@ private:
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;
+    std::vector<double>
+        feedForward(const std::vector<std::vector<int>>& imgMap);
 };
 #endif // MAINWINDOW_H

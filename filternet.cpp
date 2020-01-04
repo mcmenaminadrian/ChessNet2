@@ -36,3 +36,9 @@ FilterNet::FilterNet(const int c, const int h, const int w,
     }
 
 }
+
+void FilterNet::consume(const int filter,
+                        const int x, const int y, const int value)
+{
+
+}

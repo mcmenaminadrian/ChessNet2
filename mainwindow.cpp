@@ -57,16 +57,16 @@ void MainWindow::processLine(const QString& lineIn)
 
     //now map the image
     vector<vector<int>> imageMap;
-    for (int x = skipW; x < imgWidth; x += skipW) {
-        for (int y = skipH; y < imgHeight; y += skipH) {
+    for (int y = skipH; y < imgHeight; y += skipH) {
+        for (int x = skipW; x < imgWidth; x += skipW) {
             vector<int> imgGrid;
             for (int i = -FILTERG/2; i < FILTERG/2; i++) {
                 for (int j = -FILTERG/2 ; j < FILTERG/2; j++) {
-                    if ((x + i) < 0 || (y + j) < 0) {
+                    if ((x + j) < 0 || (y + i) < 0) {
                         imgGrid.push_back(0);
                         continue;
                     }
-                    QRgb colImg = squareImage.pixel(x + i, y + j);
+                    QRgb colImg = squareImage.pixel(x + j, y + i);
                     imgGrid.push_back(qGray(colImg));
                 }
             }
@@ -74,9 +74,31 @@ void MainWindow::processLine(const QString& lineIn)
         }
     }
 
-
+    feedForward(imageMap);
 
 }
+
+
+vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
+{
+    for (auto i = 0; i < FILTERS; i++)
+    {
+        uint indexOrig = 0;
+        for (auto y = 0; y < FILTERW; y++) {
+            for (auto x = 0; x < FILTERH; x++) {
+                const vector<int> origValue = imgMap.at(indexOrig);
+                for (auto a = 0; a < FILTERG; a++) {
+                    for (auto b = 0; b < FILTERG; b++) {
+                        filterNetwork.consume(
+                                    i, x, y, origValue.at(a * FILTERG + b));
+                    }
+                }
+            }
+        }
+    }
+    return vector<double>(0);
+}
+
 
 QString MainWindow::graphicName(const QString& lineIn) const
 {
