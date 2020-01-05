@@ -12,10 +12,7 @@
 #include "filterneuron.hpp"
 #include "filternet.hpp"
 
-#define FILTERH 12
-#define FILTERW 12
-#define FILTERG 5
-#define FILTERS 50
+
 
 using namespace std;
 
@@ -29,7 +26,8 @@ MainWindow::MainWindow(QWidget *parent)
                      this, SLOT(updateJPEG(const QImage&)));
     qGS = new QGraphicsScene();
     ui->graphicsView->setScene(qGS);
-
+    //comment out if not first run
+    generateWeights();
 }
 
 void MainWindow::updateJPEG(const QImage& jpegFile)
@@ -55,6 +53,7 @@ void MainWindow::processLine(const QString& lineIn)
     const int skipW = imgWidth/FILTERW;
     const int skipH = imgHeight/FILTERH;
 
+
     //now map the image
     vector<vector<int>> imageMap;
     for (int y = skipH; y < imgHeight; y += skipH) {
@@ -78,6 +77,76 @@ void MainWindow::processLine(const QString& lineIn)
 
 }
 
+//generates random weights - only to be used at start
+void MainWindow::generateWeights()
+{
+    //image to top layer
+    for (auto f=0; f<FILTERS; f++) {
+        for (auto g=0; g<FILTERG*FILTERG; g++) {
+            double r = static_cast <double>(rand());
+            double w = static_cast <double>(rand());
+            r = r - w;
+            r = r / RAND_MAX;
+            weights.push_back(r);
+        }
+    }
+
+    //top layer to second layer
+    for (auto f=0; f<FILTERS; f++) {
+        for (auto g=0; g<3*3; g++) {
+            double r = static_cast <double>(rand());
+            double w = static_cast <double>(rand());
+            r = r - w;
+            r = r / RAND_MAX;
+            weights.push_back(r);
+        }
+    }
+
+    //now to first pool layer
+    for (auto f=0; f<FILTERS; f++) {
+        for (auto g=0; g<3*3; g++) {
+            double r = static_cast <double>(rand());
+            double w = static_cast <double>(rand());
+            r = r - w;
+            r = r / RAND_MAX;
+            weights.push_back(r);
+        }
+    }
+
+    //second 'pool' layer
+    for (auto f=0; f<FILTERS; f++) {
+        for (auto g=0; g<3*3; g++) {
+            double r = static_cast <double>(rand());
+            double w = static_cast <double>(rand());
+            r = r - w;
+            r = r / RAND_MAX;
+            weights.push_back(r);
+        }
+    }
+
+    //to small layer
+    for (auto f=0; f<FILTERS; f++) {
+        for (auto g=0; g<3*3; g++) {
+            double r = static_cast <double>(rand());
+            double w = static_cast <double>(rand());
+            r = r - w;
+            r = r / RAND_MAX;
+            weights.push_back(r);
+        }
+    }
+
+    //to fully connected layer
+    for (auto f=0; f<FILTERS; f++) {
+        for (auto g=0; g< 4 * 9; g++) {
+            double r = static_cast <double>(rand());
+            double w = static_cast <double>(rand());
+            r = r - w;
+            r = r / RAND_MAX;
+            weights.push_back(r);
+        }
+    }
+
+}
 
 vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 {
@@ -86,13 +155,8 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
         uint indexOrig = 0;
         for (auto y = 0; y < FILTERW; y++) {
             for (auto x = 0; x < FILTERH; x++) {
-                const vector<int> origValue = imgMap.at(indexOrig);
-                for (auto a = 0; a < FILTERG; a++) {
-                    for (auto b = 0; b < FILTERG; b++) {
-                        filterNetwork.consume(
-                                    i, x, y, origValue.at(a * FILTERG + b));
-                    }
-                }
+                const vector<int>& origValue = imgMap.at(indexOrig++);
+                filterNetwork.consume(this, i, y, x, origValue);
             }
         }
     }
@@ -142,5 +206,15 @@ void MainWindow::on_pushButton_clicked()
         processLine(inputLine);
     }
 
+}
+
+void MainWindow::setWeight(const int &index, const double &newWeight)
+{
+    weights.at(index) = newWeight;
+}
+
+double MainWindow::getWeight(const int &index) const
+{
+    return weights.at(index);
 }
 

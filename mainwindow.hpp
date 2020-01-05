@@ -3,7 +3,12 @@
 
 #include <QMainWindow>
 #include <QGraphicsScene>
-#include <filternet.hpp>
+#include "filternet.hpp"
+
+#define FILTERH 12
+#define FILTERW 12
+#define FILTERG 5
+#define FILTERS 50
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -16,6 +21,8 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    void setWeight(const int& index, const double& newWeight);
+    double getWeight(const int& index) const;
 
 public slots:
     void updateJPEG(const QImage& jpegName);
@@ -30,10 +37,12 @@ private:
     Ui::MainWindow *ui;
     QGraphicsScene *qGS;
     FilterNet filterNetwork;
+    std::vector<double> weights;
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;
     std::vector<double>
         feedForward(const std::vector<std::vector<int>>& imgMap);
+    void generateWeights();
 };
 #endif // MAINWINDOW_H

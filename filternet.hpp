@@ -4,11 +4,14 @@
 #include <vector>
 #include "filterneuron.hpp"
 
+class MainWindow;
+
 class FilterNet
 {
 public:
     FilterNet(const int c, const int h, const int w, const int g);
-    void consume(const int filter, const int x, const int y, const int value);
+    void consume(MainWindow* pMW, const int filter, const int row,
+                 const int col, const std::vector<int>& values);
 
 private:
     const int count;
