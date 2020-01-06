@@ -8,6 +8,7 @@
 #include <QPixmap>
 #include <vector>
 #include <algorithm>
+#include <ctime>
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "filterneuron.hpp"
@@ -31,6 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView_2->setScene(qFS);
     ui->pushButton_2->setDisabled(true);
     //comment out if not first run
+    srand (time(NULL));
     generateWeights();
 }
 
@@ -60,8 +62,12 @@ void MainWindow::processLine(const QString& lineIn)
 
     //now map the image
     vector<vector<int>> imageMap;
-    for (int y = skipH; y < imgHeight; y += skipH) {
-        for (int x = skipW; x < imgWidth; x += skipW) {
+    int y = 0;
+    for (int l = 0; l < FILTERH; l++) {
+        y += skipH;
+        int x = 0;
+        for (int k = 0; k < FILTERW; k++){
+            x += skipW;
             vector<int> imgGrid;
             //use <= if FILTERG is odd
             for (int i = -FILTERG/2; i <= FILTERG/2; i++) {
@@ -157,16 +163,55 @@ void MainWindow::generateWeights()
 vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 {
     ui->pushButton_2->setDisabled(true);
+    //top layer
     for (auto i = 0; i < FILTERS; i++)
     {
         uint indexOrig = 0;
-        for (auto y = 0; y < FILTERW; y++) {
-            for (auto x = 0; x < FILTERH; x++) {
+        for (auto y = 0; y < FILTERH; y++) {
+            for (auto x = 0; x < FILTERW; x++) {
                 const vector<int>& origValue = imgMap.at(indexOrig++);
                 filterNetwork.consume(this, i, y, x, origValue);
             }
         }
     }
+    //second layer
+    for (auto i = 0; i < FILTERS; i++)
+    {
+        int offset = FILTERS * FILTERG * FILTERG;
+        offset += (i * FILTERG * FILTERG);
+        vector<double> localWeights;
+        for (int j = 0; j < FILTERG * FILTERG; j++)
+        {
+            localWeights.push_back(weights.at(offset + j));
+        }
+        for (auto row = 0; row < FILTERH; row++) {
+            for (auto col = 0; col < FILTERW; col++) {
+                double sum = 0.0;
+                int weightCount = 0;
+                for (auto rowoffset = -FILTERG/2; rowoffset <= FILTERG/2;
+                     rowoffset++) {
+                    for (auto coloffset = -FILTERG/2; coloffset <= FILTERG/2;
+                         coloffset++) {
+                        if ((coloffset + col < 0) || (rowoffset + row < 0) ||
+                                (coloffset + col >= FILTERW) ||
+                                (rowoffset + row >= FILTERH)) {
+                            weightCount++;
+                            continue;
+                        }
+                        pair<double, double> upperLayerActivation =
+                                filterNetwork.filterValue(
+                                    i, col + coloffset, row + rowoffset);
+                        sum += upperLayerActivation.first
+                                * localWeights.at(weightCount++);
+                    }
+                }
+                filterNetwork.secondConsume(i, row, col, sum);
+            }
+        }
+    }
+
+
+
     drawFilteredImage();
     return vector<double>(0);
 }
@@ -174,10 +219,12 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 void MainWindow::drawFilteredImage()
 {
 
-    QImage fImg(FILTERW * 10 + 10, FILTERH * 5 + 5, QImage::Format_Grayscale8);
+
+    QImage fImg(FILTERW * 10 + 10, 2 * (FILTERH * 5 + 5),
+                QImage::Format_Grayscale8);
     for (auto filter = 0; filter < FILTERS; filter++) {
-        for (auto x = 0; x < FILTERW; x++) {
-            for (auto y = 0; y < FILTERH; y++) {
+        for (auto y = 0; y < FILTERH; y++) {
+            for (auto x = 0; x < FILTERW; x++) {
                 pair<double, double> activated =
                     filterNetwork.filterValue(filter, x, y);
                 int pixVal = static_cast<int>(activated.first);
@@ -187,6 +234,19 @@ void MainWindow::drawFilteredImage()
                 fImg.setPixel(pixX, pixY, qRgb(pixVal, pixVal, pixVal));
             }
         }
+        int secondOffset = FILTERH * 5 + 5;
+        for (auto y = 0; y < FILTERH; y++) {
+            for (auto x = 0; x < FILTERW; x++) {
+                pair<double, double> activated =
+                    filterNetwork.filterValueB(filter, x, y);
+                int pixVal = static_cast<int>(activated.first);
+                int pixY = filter/10 * FILTERH + filter/10 + y + secondOffset;
+                int pixX = filter%10 * FILTERW + filter%10 + x;
+                pixVal = min(pixVal, 255);
+                fImg.setPixel(pixX, pixY, qRgb(pixVal, pixVal, pixVal));
+            }
+        }
+
     }
     ui->graphicsView_2->scene()->addPixmap(QPixmap::fromImage(fImg));
 }

@@ -12,8 +12,12 @@ public:
     FilterNet(const int c, const int h, const int w, const int g);
     void consume(MainWindow* pMW, const int filter, const int row,
                  const int col, const std::vector<int>& values);
+    void secondConsume(const int filter, const int row, const int col,
+                       const double& sum);
     std::pair<double, double>
         filterValue(const int i, const int x, const int y) const;
+    std::pair<double, double>
+        filterValueB(const int i, const int x, const int y) const;
 
 private:
     const int count;

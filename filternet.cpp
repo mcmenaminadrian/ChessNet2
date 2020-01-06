@@ -45,6 +45,18 @@ std::pair<double, double>
     return filtersTop.at(i).at(y * FILTERW + x).getActivation();
 }
 
+std::pair<double, double>
+    FilterNet::filterValueB(const int i, const int x, const int y) const
+{
+    return filtersBottom.at(i).at(y * FILTERW + x).getActivation();
+}
+
+void FilterNet::secondConsume(const int filter, const int row, const int col,
+                              const double &sum)
+{
+    filtersBottom.at(filter).at(row * FILTERW + col).setActivation(sum);
+}
+
 void FilterNet::consume(MainWindow* pMW, const int filter,
         const int row, const int col, const std::vector<int>& value)
 {
