@@ -7,6 +7,7 @@
 #include <QImage>
 #include <QPixmap>
 #include <vector>
+#include <algorithm>
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "filterneuron.hpp"
@@ -25,7 +26,10 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this, SIGNAL(showJPEG(const QImage&)),
                      this, SLOT(updateJPEG(const QImage&)));
     qGS = new QGraphicsScene();
+    qFS = new QGraphicsScene();
     ui->graphicsView->setScene(qGS);
+    ui->graphicsView_2->setScene(qFS);
+    ui->pushButton_2->setDisabled(true);
     //comment out if not first run
     generateWeights();
 }
@@ -75,6 +79,7 @@ void MainWindow::processLine(const QString& lineIn)
     }
 
     feedForward(imageMap);
+    ui->pushButton_2->setDisabled(false);
 
 }
 
@@ -151,6 +156,7 @@ void MainWindow::generateWeights()
 
 vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 {
+    ui->pushButton_2->setDisabled(true);
     for (auto i = 0; i < FILTERS; i++)
     {
         uint indexOrig = 0;
@@ -161,7 +167,28 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
             }
         }
     }
+    drawFilteredImage();
     return vector<double>(0);
+}
+
+void MainWindow::drawFilteredImage()
+{
+
+    QImage fImg(FILTERW * 10 + 10, FILTERH * 5 + 5, QImage::Format_Grayscale8);
+    for (auto filter = 0; filter < FILTERS; filter++) {
+        for (auto x = 0; x < FILTERW; x++) {
+            for (auto y = 0; y < FILTERH; y++) {
+                pair<double, double> activated =
+                    filterNetwork.filterValue(filter, x, y);
+                int pixVal = static_cast<int>(activated.first);
+                int pixY = filter/10 * FILTERH + filter/10 + y;
+                int pixX = filter%10 * FILTERW + filter%10 + x;
+                pixVal = min(pixVal, 255);
+                fImg.setPixel(pixX, pixY, qRgb(pixVal, pixVal, pixVal));
+            }
+        }
+    }
+    ui->graphicsView_2->scene()->addPixmap(QPixmap::fromImage(fImg));
 }
 
 
@@ -185,6 +212,7 @@ MainWindow::~MainWindow()
 {
     delete qGS;
     delete ui;
+    delete in;
 }
 
 
@@ -201,11 +229,15 @@ void MainWindow::on_pushButton_clicked()
         msgBox.exec();
         exit(EXIT_FAILURE);
     }
-    QTextStream in(&csvFile);
-    while (!in.atEnd()) {
-        QString inputLine = in.readLine();
+    in = new QTextStream(&csvFile);
+    if (!in->atEnd())
+    {
+        QString inputLine = in->readLine();
         processLine(inputLine);
     }
+
+    ui->pushButton->setDisabled(true);
+    ui->pushButton_2->setDisabled(false);
 
 }
 
@@ -219,3 +251,20 @@ double MainWindow::getWeight(const int &index) const
     return weights.at(index);
 }
 
+
+void MainWindow::on_pushButton_2_clicked()
+{
+    if (!in->atEnd())
+    {
+        QString inputLine = in->readLine();
+        processLine(inputLine);
+    }
+    else
+    {
+      QMessageBox qMB(QMessageBox::Information,
+                  "File exhausted",
+                  "All images processed",
+                  QMessageBox::Ok);
+      qMB.exec();
+    }
+}

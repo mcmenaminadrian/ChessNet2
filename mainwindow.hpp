@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QGraphicsScene>
+#include <QTextStream>
 #include "filternet.hpp"
 
 #define FILTERH 12
@@ -33,16 +34,20 @@ signals:
 private slots:
     void on_pushButton_clicked();
 
+    void on_pushButton_2_clicked();
+
 private:
     Ui::MainWindow *ui;
-    QGraphicsScene *qGS;
+    QGraphicsScene *qGS, *qFS;
     FilterNet filterNetwork;
     std::vector<double> weights;
+    QTextStream *in;
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;
     std::vector<double>
         feedForward(const std::vector<std::vector<int>>& imgMap);
     void generateWeights();
+    void drawFilteredImage();
 };
 #endif // MAINWINDOW_H

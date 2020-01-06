@@ -39,6 +39,12 @@ FilterNet::FilterNet(const int c, const int h, const int w,
 
 }
 
+std::pair<double, double>
+    FilterNet::filterValue(const int i, const int x, const int y) const
+{
+    return filtersTop.at(i).at(y * FILTERW + x).getActivation();
+}
+
 void FilterNet::consume(MainWindow* pMW, const int filter,
         const int row, const int col, const std::vector<int>& value)
 {
@@ -54,3 +60,4 @@ void FilterNet::consume(MainWindow* pMW, const int filter,
     }
     (filtersTop.at(filter)).at(row * FILTERW + col).setActivation(sum);
 }
+
