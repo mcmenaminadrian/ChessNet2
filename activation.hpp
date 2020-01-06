@@ -4,15 +4,20 @@
 #endif // ACTIVATION_HPP
 
 #include <cmath>
+#include <algorithm>
 
 using namespace std;
 
 static double activationFunction(const double& input)
 {
-    return tanh(input);
+    return max(0.0, input);
 }
 
 static double activationDerivative(const double& input)
 {
-    return 1 - pow(tanh(input), 2);
+    if (input > 0.0) {
+        return 1.0;
+    } else {
+        return 0.0;
+    }
 }

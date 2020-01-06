@@ -59,8 +59,9 @@ void MainWindow::processLine(const QString& lineIn)
     for (int y = skipH; y < imgHeight; y += skipH) {
         for (int x = skipW; x < imgWidth; x += skipW) {
             vector<int> imgGrid;
-            for (int i = -FILTERG/2; i < FILTERG/2; i++) {
-                for (int j = -FILTERG/2 ; j < FILTERG/2; j++) {
+            //use <= if FILTERG is odd
+            for (int i = -FILTERG/2; i <= FILTERG/2; i++) {
+                for (int j = -FILTERG/2 ; j <= FILTERG/2; j++) {
                     if ((x + j) < 0 || (y + i) < 0) {
                         imgGrid.push_back(0);
                         continue;
