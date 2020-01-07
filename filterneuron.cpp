@@ -20,3 +20,8 @@ std::pair<double, double> FilterNeuron::getActivation() const
 {
     return activation;
 }
+
+void FilterNeuron::setPool(const double& value)
+{
+    activation = pair<double, double>(value, 0);
+}

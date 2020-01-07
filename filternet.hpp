@@ -14,6 +14,8 @@ public:
                  const int col, const std::vector<int>& values);
     void secondConsume(const int filter, const int row, const int col,
                        const double& sum);
+    void buildPool(const int filter, const int row, const int col,
+                   const double& value, const int factor);
     std::pair<double, double>
         filterValue(const int i, const int x, const int y) const;
     std::pair<double, double>

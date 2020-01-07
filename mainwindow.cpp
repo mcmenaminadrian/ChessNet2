@@ -114,7 +114,9 @@ void MainWindow::generateWeights()
         }
     }
 
-    //now to first pool layer
+
+
+    //to second 'pool' layer
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<3*3; g++) {
             double r = static_cast <double>(rand());
@@ -125,27 +127,7 @@ void MainWindow::generateWeights()
         }
     }
 
-    //second 'pool' layer
-    for (auto f=0; f<FILTERS; f++) {
-        for (auto g=0; g<3*3; g++) {
-            double r = static_cast <double>(rand());
-            double w = static_cast <double>(rand());
-            r = r - w;
-            r = r / RAND_MAX;
-            weights.push_back(r);
-        }
-    }
 
-    //to small layer
-    for (auto f=0; f<FILTERS; f++) {
-        for (auto g=0; g<3*3; g++) {
-            double r = static_cast <double>(rand());
-            double w = static_cast <double>(rand());
-            r = r - w;
-            r = r / RAND_MAX;
-            weights.push_back(r);
-        }
-    }
 
     //to fully connected layer
     for (auto f=0; f<FILTERS; f++) {
@@ -164,7 +146,7 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 {
     ui->pushButton_2->setDisabled(true);
     //top layer
-    for (auto i = 0; i < FILTERS; i++)
+    for (int i = 0; i < FILTERS; i++)
     {
         uint indexOrig = 0;
         for (int y = 0; y < FILTERH; y++) {
@@ -210,7 +192,24 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
         }
     }
 
-
+    //pool
+    const int SPAN = 2;
+    for (int filter = 0; filter < FILTERS; filter++) {
+        for (int row = 0; row <= FILTERH - SPAN; row += SPAN) {
+            for (int col = 0; col <= FILTERW - SPAN; col+= SPAN) {
+                vector<double> cellValues;
+                for (int iRow = 0; iRow < SPAN; iRow++) {
+                    for (int iCol = 0; iCol < SPAN; iCol++) {
+                        cellValues.push_back(filterNetwork.filterValueB(
+                            filter, col + iCol, row + iRow).first);
+                    }
+                }
+                auto maxVal = std::max_element(std::begin(cellValues),
+                                               std::end(cellValues));
+                filterNetwork.buildPool(filter, row, col, *maxVal, SPAN);
+            }
+        }
+    }
 
     drawFilteredImage();
     return vector<double>(0);

@@ -51,6 +51,13 @@ std::pair<double, double>
     return filtersBottom.at(i).at(y * FILTERW + x).getActivation();
 }
 
+void FilterNet::buildPool(const int filter, const int row, const int col,
+                          const double &value, const int factor)
+{
+    poolTop.at(filter).
+            at((row * FILTERW/factor) / factor + col / factor).setPool(value);
+}
+
 void FilterNet::secondConsume(const int filter, const int row, const int col,
                               const double &sum)
 {
