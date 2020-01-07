@@ -167,15 +167,15 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
     for (auto i = 0; i < FILTERS; i++)
     {
         uint indexOrig = 0;
-        for (auto y = 0; y < FILTERH; y++) {
-            for (auto x = 0; x < FILTERW; x++) {
+        for (int y = 0; y < FILTERH; y++) {
+            for (int x = 0; x < FILTERW; x++) {
                 const vector<int>& origValue = imgMap.at(indexOrig++);
                 filterNetwork.consume(this, i, y, x, origValue);
             }
         }
     }
     //second layer
-    for (auto i = 0; i < FILTERS; i++)
+    for (int i = 0; i < FILTERS; i++)
     {
         int offset = FILTERS * FILTERG * FILTERG;
         offset += (i * FILTERG * FILTERG);
@@ -184,13 +184,13 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
         {
             localWeights.push_back(weights.at(offset + j));
         }
-        for (auto row = 0; row < FILTERH; row++) {
-            for (auto col = 0; col < FILTERW; col++) {
+        for (int row = 0; row < FILTERH; row++) {
+            for (int col = 0; col < FILTERW; col++) {
                 double sum = 0.0;
                 int weightCount = 0;
-                for (auto rowoffset = -FILTERG/2; rowoffset <= FILTERG/2;
+                for (int rowoffset = -FILTERG/2; rowoffset <= FILTERG/2;
                      rowoffset++) {
-                    for (auto coloffset = -FILTERG/2; coloffset <= FILTERG/2;
+                    for (int coloffset = -FILTERG/2; coloffset <= FILTERG/2;
                          coloffset++) {
                         if ((coloffset + col < 0) || (rowoffset + row < 0) ||
                                 (coloffset + col >= FILTERW) ||
@@ -222,27 +222,30 @@ void MainWindow::drawFilteredImage()
 
     QImage fImg(FILTERW * 10 + 10, 2 * (FILTERH * 5 + 5),
                 QImage::Format_Grayscale8);
-    for (auto filter = 0; filter < FILTERS; filter++) {
-        for (auto y = 0; y < FILTERH; y++) {
-            for (auto x = 0; x < FILTERW; x++) {
+    const int secondOffset = FILTERH * 5 + 5;
+    for (int filter = 0; filter < FILTERS; filter++) {
+        for (int y = 0; y < FILTERH; y++) {
+            for (int x = 0; x < FILTERW; x++) {
                 pair<double, double> activated =
                     filterNetwork.filterValue(filter, x, y);
                 int pixVal = static_cast<int>(activated.first);
                 int pixY = filter/10 * FILTERH + filter/10 + y;
                 int pixX = filter%10 * FILTERW + filter%10 + x;
                 pixVal = min(pixVal, 255);
+                pixVal = max(pixVal, 0);
                 fImg.setPixel(pixX, pixY, qRgb(pixVal, pixVal, pixVal));
             }
         }
-        int secondOffset = FILTERH * 5 + 5;
-        for (auto y = 0; y < FILTERH; y++) {
-            for (auto x = 0; x < FILTERW; x++) {
+
+        for (int y = 0; y < FILTERH; y++) {
+            for (int x = 0; x < FILTERW; x++) {
                 pair<double, double> activated =
                     filterNetwork.filterValueB(filter, x, y);
                 int pixVal = static_cast<int>(activated.first);
                 int pixY = filter/10 * FILTERH + filter/10 + y + secondOffset;
                 int pixX = filter%10 * FILTERW + filter%10 + x;
                 pixVal = min(pixVal, 255);
+                pixVal = max(pixVal, 0);
                 fImg.setPixel(pixX, pixY, qRgb(pixVal, pixVal, pixVal));
             }
         }

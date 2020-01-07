@@ -10,7 +10,11 @@ using namespace std;
 
 static double activationFunction(const double& input)
 {
-    return max(0.0, input);
+    if (input < 0.0) {
+        return input * 0.01;
+    }
+    else return input;
+
 }
 
 static double activationDerivative(const double& input)
@@ -18,6 +22,6 @@ static double activationDerivative(const double& input)
     if (input > 0.0) {
         return 1.0;
     } else {
-        return 0.0;
+        return 0.01;
     }
 }
