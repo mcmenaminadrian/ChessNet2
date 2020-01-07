@@ -13,6 +13,7 @@
 #include "ui_mainwindow.h"
 #include "filterneuron.hpp"
 #include "filternet.hpp"
+#include "fclneuron.h"
 
 
 
@@ -34,6 +35,30 @@ MainWindow::MainWindow(QWidget *parent)
     //comment out if not first run
     srand (time(NULL));
     generateWeights();
+    for (int layer = 0; layer < CATS; layer++)
+    {
+        finalLayer.push_back(FCLNeuron());
+    }
+    ui->lcdNumber->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_2->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_3->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_4->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_5->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_6->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_7->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_8->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+    ui->lcdNumber_9->setStyleSheet(
+                """QLCDNumber{background-color: black; color: red;}""");
+
+
 }
 
 void MainWindow::updateJPEG(const QImage& jpegFile)
@@ -105,7 +130,7 @@ void MainWindow::generateWeights()
 
     //top layer to second layer
     for (auto f=0; f<FILTERS; f++) {
-        for (auto g=0; g<3*3; g++) {
+        for (auto g=0; g<FILTERG*FILTERG; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
@@ -113,12 +138,10 @@ void MainWindow::generateWeights()
             weights.push_back(r);
         }
     }
-
-
 
     //to second 'pool' layer
     for (auto f=0; f<FILTERS; f++) {
-        for (auto g=0; g<3*3; g++) {
+        for (auto g=0; g<2*2; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
@@ -127,11 +150,9 @@ void MainWindow::generateWeights()
         }
     }
 
-
-
     //to fully connected layer
     for (auto f=0; f<FILTERS; f++) {
-        for (auto g=0; g< 4 * 9; g++) {
+        for (auto g=0; g< 4 * CATS; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
@@ -211,6 +232,86 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
         }
     }
 
+    //convolve pool
+    for (int filter = 0; filter < FILTERS; filter++) {
+        int offset = FILTERS * FILTERG * FILTERG * 2;
+        offset += filter * SPAN * SPAN;
+        vector<double> localWeights;
+        localWeights = vector<double>(weights.begin() + offset,
+                                      weights.begin() + offset + SPAN * SPAN);
+
+        for (int row = 0; row <FILTERH/SPAN; row ++) {
+            for (int col = 0; col < FILTERW/SPAN; col++) {
+                vector<double> cellValues;
+                for (int iRow = 0; iRow < SPAN; iRow++) {
+                    for (int iCol = 0; iCol < SPAN; iCol++) {
+                        if ((row + iRow >= FILTERH/SPAN) ||
+                                (col + iCol >= FILTERW/SPAN)) {
+                            cellValues.push_back(0);
+                            continue;
+                        }
+                        cellValues.push_back(filterNetwork.poolValue(
+                            filter, col + iCol, row + iRow, SPAN).first);
+                    }
+                }
+                int index = 0;
+                double sum = 0.0;
+                for (const auto& val: cellValues) {
+                    sum += val * localWeights.at(index++);
+                }
+                filterNetwork.buildPoolConv(filter, row, col, sum, SPAN);
+            }
+        }
+    }
+
+    //second pool
+    const int SECOND_SPAN = 3;
+    const int REDH = FILTERH/SPAN;
+    const int REDW = FILTERW/SPAN;
+    for (int filter = 0; filter < FILTERS; filter++) {
+        for (int row = 0; row <= REDH - SECOND_SPAN; row += SECOND_SPAN) {
+            for (int col = 0; col <= REDW - SECOND_SPAN; col+= SECOND_SPAN) {
+                vector<double> cellValues;
+                for (int iRow = 0; iRow < SECOND_SPAN; iRow++) {
+                    for (int iCol = 0; iCol < SECOND_SPAN; iCol++) {
+                        cellValues.push_back(filterNetwork.filterPoolB(
+                            filter, col + iCol, row + iRow, REDW).first);
+                    }
+                }
+                auto maxVal = std::max_element(std::begin(cellValues),
+                                               std::end(cellValues));
+                filterNetwork.buildSecondPool(filter, row, col, *maxVal,
+                                              SECOND_SPAN, REDW);
+            }
+        }
+    }
+
+    //fully connected final layer
+    int fclCount = 0;
+    int offset = FILTERS * FILTERG * FILTERG * 2;
+    offset += FILTERS * FILTERG/2 * FILTERG/2;
+    for (int fcl = 0; fcl < CATS; fcl++)
+    {
+        double sum = 0.0;
+        for (int filter = 0; filter < FILTERS; filter++) {
+            for (int smallPool = 0; smallPool < 4; smallPool++) {
+                sum += filterNetwork.filterSmallPool(filter, smallPool).first *
+                        weights.at(offset + fclCount++);
+            }
+        }
+        finalLayer.at(fcl).setActivation(sum);
+    }
+
+    ui->lcdNumber->display(finalLayer.at(0).getActivation().first);
+    ui->lcdNumber_2->display(finalLayer.at(1).getActivation().first);
+    ui->lcdNumber_3->display(finalLayer.at(2).getActivation().first);
+    ui->lcdNumber_4->display(finalLayer.at(3).getActivation().first);
+    ui->lcdNumber_5->display(finalLayer.at(4).getActivation().first);
+    ui->lcdNumber_6->display(finalLayer.at(5).getActivation().first);
+    ui->lcdNumber_7->display(finalLayer.at(6).getActivation().first);
+    ui->lcdNumber_8->display(finalLayer.at(7).getActivation().first);
+    ui->lcdNumber_9->display(finalLayer.at(8).getActivation().first);
+
     drawFilteredImage();
     return vector<double>(0);
 }
@@ -219,17 +320,18 @@ void MainWindow::drawFilteredImage()
 {
 
 
-    QImage fImg(FILTERW * 10 + 10, 2 * (FILTERH * 5 + 5),
+    QImage fImg(FILTERW * 10 + 100, 2 * (FILTERH * 5 + 50),
                 QImage::Format_Grayscale8);
-    const int secondOffset = FILTERH * 5 + 5;
+    fImg.fill(255);
+    const int secondOffset = FILTERH * 5 + 50;
     for (int filter = 0; filter < FILTERS; filter++) {
         for (int y = 0; y < FILTERH; y++) {
             for (int x = 0; x < FILTERW; x++) {
                 pair<double, double> activated =
                     filterNetwork.filterValue(filter, x, y);
                 int pixVal = static_cast<int>(activated.first);
-                int pixY = filter/10 * FILTERH + filter/10 + y;
-                int pixX = filter%10 * FILTERW + filter%10 + x;
+                int pixY = filter/10 * FILTERH + 10*(filter/10) + y;
+                int pixX = filter%10 * FILTERW + 10*(filter%10) + x;
                 pixVal = min(pixVal, 255);
                 pixVal = max(pixVal, 0);
                 fImg.setPixel(pixX, pixY, qRgb(pixVal, pixVal, pixVal));
@@ -241,8 +343,8 @@ void MainWindow::drawFilteredImage()
                 pair<double, double> activated =
                     filterNetwork.filterValueB(filter, x, y);
                 int pixVal = static_cast<int>(activated.first);
-                int pixY = filter/10 * FILTERH + filter/10 + y + secondOffset;
-                int pixX = filter%10 * FILTERW + filter%10 + x;
+                int pixY = filter/10 * FILTERH + 10*(filter/10) + y + secondOffset;
+                int pixX = filter%10 * FILTERW + 10*(filter%10) + x;
                 pixVal = min(pixVal, 255);
                 pixVal = max(pixVal, 0);
                 fImg.setPixel(pixX, pixY, qRgb(pixVal, pixVal, pixVal));

@@ -5,11 +5,14 @@
 #include <QGraphicsScene>
 #include <QTextStream>
 #include "filternet.hpp"
+#include "fclneuron.h"
 
 #define FILTERH 12
 #define FILTERW 12
 #define FILTERG 5
 #define FILTERS 50
+
+#define CATS 9
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -42,6 +45,7 @@ private:
     FilterNet filterNetwork;
     std::vector<double> weights;
     QTextStream *in;
+    std::vector<FCLNeuron> finalLayer;
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;

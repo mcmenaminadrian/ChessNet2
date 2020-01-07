@@ -39,6 +39,12 @@ FilterNet::FilterNet(const int c, const int h, const int w,
 
 }
 
+std::pair<double, double> FilterNet::filterSmallPool(
+        const int i, const int unit) const
+{
+    return lastPool.at(i).at(unit).getActivation();
+}
+
 std::pair<double, double>
     FilterNet::filterValue(const int i, const int x, const int y) const
 {
@@ -51,11 +57,36 @@ std::pair<double, double>
     return filtersBottom.at(i).at(y * FILTERW + x).getActivation();
 }
 
+std::pair<double, double> FilterNet::filterPoolB(const int i, const int x,
+                                            const int y, const int REDW) const
+{
+    return poolBottom.at(i).at(y * REDW + x).getActivation();
+}
+
+std::pair<double, double> FilterNet::poolValue(const int i, const int x,
+                                        const int y, const int factor) const
+{
+    return poolTop.at(i).at(y * FILTERW/factor + x).getActivation();
+}
+
 void FilterNet::buildPool(const int filter, const int row, const int col,
                           const double &value, const int factor)
 {
     poolTop.at(filter).
             at((row * FILTERW/factor) / factor + col / factor).setPool(value);
+}
+
+void FilterNet::buildPoolConv(const int filter, const int row, const int col,
+                              const double &value, const int factor)
+{
+    poolBottom.at(filter).at(row * FILTERW/factor + col).setActivation(value);
+}
+
+void FilterNet::buildSecondPool(const int filter, const int row,
+                                const int col, const double &value,
+                                const int factor, const int REDW)
+{
+    lastPool.at(filter).at((row * REDW/factor)/factor + col/factor).setPool(value);
 }
 
 void FilterNet::secondConsume(const int filter, const int row, const int col,

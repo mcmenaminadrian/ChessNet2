@@ -16,10 +16,20 @@ public:
                        const double& sum);
     void buildPool(const int filter, const int row, const int col,
                    const double& value, const int factor);
+    void buildPoolConv(const int filter, const int row, const int col,
+                       const double& value, const int factor);
+    void buildSecondPool(const int filter, const int row, const int col,
+                         const double& value, const int factor, const int redW);
     std::pair<double, double>
         filterValue(const int i, const int x, const int y) const;
     std::pair<double, double>
         filterValueB(const int i, const int x, const int y) const;
+    std::pair<double, double> poolValue(const int i, const int x,
+                                        const int y, const int factor) const;
+    std::pair<double, double> filterPoolB(const int i, const int x,
+                                          const int y, const int redw) const;
+    std::pair<double, double>
+        filterSmallPool(const int i, const int unit) const;
 
 private:
     const int count;
