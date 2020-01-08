@@ -27,6 +27,24 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     QObject::connect(this, SIGNAL(showJPEG(const QImage&)),
                      this, SLOT(updateJPEG(const QImage&)));
+    QObject::connect(this, SIGNAL(showLCD0(const double&)),
+                     this, SLOT(updateLCD0(const double&)));
+    QObject::connect(this, SIGNAL(showLCD1(const double&)),
+                     this, SLOT(updateLCD2(const double&)));
+    QObject::connect(this, SIGNAL(showLCD2(const double&)),
+                     this, SLOT(updateLCD2(const double&)));
+    QObject::connect(this, SIGNAL(showLCD3(const double&)),
+                     this, SLOT(updateLCD3(const double&)));
+    QObject::connect(this, SIGNAL(showLCD4(const double&)),
+                     this, SLOT(updateLCD4(const double&)));
+    QObject::connect(this, SIGNAL(showLCD5(const double&)),
+                     this, SLOT(updateLCD5(const double&)));
+    QObject::connect(this, SIGNAL(showLCD6(const double&)),
+                     this, SLOT(updateLCD6(const double&)));
+    QObject::connect(this, SIGNAL(showLCD7(const double&)),
+                     this, SLOT(updateLCD7(const double&)));
+    QObject::connect(this, SIGNAL(showLCD8(const double&)),
+                     this, SLOT(updateLCD8(const double&)));
     qGS = new QGraphicsScene();
     qFS = new QGraphicsScene();
     ui->graphicsView->setScene(qGS);
@@ -59,6 +77,51 @@ MainWindow::MainWindow(QWidget *parent)
                 """QLCDNumber{background-color: black; color: red;}""");
 
 
+}
+
+void MainWindow::updateLCD0(const double& number)
+{
+    ui->lcdNumber->display(number);
+}
+
+void MainWindow::updateLCD1(const double& number)
+{
+    ui->lcdNumber_2->display(number);
+}
+
+void MainWindow::updateLCD2(const double& number)
+{
+    ui->lcdNumber_3->display(number);
+}
+
+void MainWindow::updateLCD3(const double& number)
+{
+    ui->lcdNumber_4->display(number);
+}
+
+void MainWindow::updateLCD4(const double& number)
+{
+    ui->lcdNumber_5->display(number);
+}
+
+void MainWindow::updateLCD5(const double& number)
+{
+    ui->lcdNumber_6->display(number);
+}
+
+void MainWindow::updateLCD6(const double& number)
+{
+    ui->lcdNumber_7->display(number);
+}
+
+void MainWindow::updateLCD7(const double& number)
+{
+    ui->lcdNumber_8->display(number);
+}
+
+void MainWindow::updateLCD8(const double& number)
+{
+    ui->lcdNumber_9->display(number);
 }
 
 void MainWindow::updateJPEG(const QImage& jpegFile)
@@ -288,8 +351,9 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 
     //fully connected final layer
     int fclCount = 0;
+    const int halfSize = FILTERG/2;
     int offset = FILTERS * FILTERG * FILTERG * 2;
-    offset += FILTERS * FILTERG/2 * FILTERG/2;
+    offset += FILTERS * halfSize * halfSize;
     for (int fcl = 0; fcl < CATS; fcl++)
     {
         double sum = 0.0;
@@ -302,15 +366,15 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
         finalLayer.at(fcl).setActivation(sum);
     }
 
-    ui->lcdNumber->display(finalLayer.at(0).getActivation().first);
-    ui->lcdNumber_2->display(finalLayer.at(1).getActivation().first);
-    ui->lcdNumber_3->display(finalLayer.at(2).getActivation().first);
-    ui->lcdNumber_4->display(finalLayer.at(3).getActivation().first);
-    ui->lcdNumber_5->display(finalLayer.at(4).getActivation().first);
-    ui->lcdNumber_6->display(finalLayer.at(5).getActivation().first);
-    ui->lcdNumber_7->display(finalLayer.at(6).getActivation().first);
-    ui->lcdNumber_8->display(finalLayer.at(7).getActivation().first);
-    ui->lcdNumber_9->display(finalLayer.at(8).getActivation().first);
+    emit showLCD0(finalLayer.at(0).getActivation().first);
+    emit showLCD1(finalLayer.at(1).getActivation().first);
+    emit showLCD2(finalLayer.at(2).getActivation().first);
+    emit showLCD3(finalLayer.at(3).getActivation().first);
+    emit showLCD4(finalLayer.at(4).getActivation().first);
+    emit showLCD5(finalLayer.at(5).getActivation().first);
+    emit showLCD6(finalLayer.at(6).getActivation().first);
+    emit showLCD7(finalLayer.at(7).getActivation().first);
+    emit showLCD8(finalLayer.at(8).getActivation().first);
 
     drawFilteredImage();
     return vector<double>(0);

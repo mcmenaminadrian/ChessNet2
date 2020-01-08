@@ -33,11 +33,30 @@ public slots:
 
 signals:
     void showJPEG(const QImage& fileName);
+    void showLCD0(const double& num);
+    void showLCD1(const double& num);
+    void showLCD2(const double& num);
+    void showLCD3(const double& num);
+    void showLCD4(const double& num);
+    void showLCD5(const double& num);
+    void showLCD6(const double& num);
+    void showLCD7(const double& num);
+    void showLCD8(const double& num);
 
 private slots:
     void on_pushButton_clicked();
 
     void on_pushButton_2_clicked();
+    void updateLCD0(const double& num);
+    void updateLCD1(const double& num);
+    void updateLCD2(const double& num);
+    void updateLCD3(const double& num);
+    void updateLCD4(const double& num);
+    void updateLCD5(const double& num);
+    void updateLCD6(const double& num);
+    void updateLCD7(const double& num);
+    void updateLCD8(const double& num);
+
 
 private:
     Ui::MainWindow *ui;
