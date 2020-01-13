@@ -1,3 +1,4 @@
+#include <iostream>
 #include <QGraphicsScene>
 #include <QString>
 #include <QFileDialog>
@@ -50,9 +51,12 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->setScene(qGS);
     ui->graphicsView_2->setScene(qFS);
     ui->pushButton_2->setDisabled(true);
-    //comment out if not first run
+
+    //generate and save weights
     srand (time(NULL));
     generateWeights();
+    saveWeights();
+    loadWeights();
     for (int layer = 0; layer < CATS; layer++)
     {
         finalLayer.push_back(FCLNeuron());
@@ -77,6 +81,14 @@ MainWindow::MainWindow(QWidget *parent)
                 """QLCDNumber{background-color: black; color: red;}""");
 
 
+}
+
+MainWindow::~MainWindow()
+{
+    delete qGS;
+    delete ui;
+    delete in;
+    delete csvFile;
 }
 
 void MainWindow::updateLCD0(const double& number)
@@ -174,6 +186,35 @@ void MainWindow::processLine(const QString& lineIn)
 
     feedForward(imageMap);
     ui->pushButton_2->setDisabled(false);
+
+}
+
+void MainWindow::saveWeights()
+{
+    QFile weightsFile("weights.dat");
+    weightsFile.open(QIODevice::WriteOnly);
+    QDataStream outWeights(&weightsFile);
+    for (const auto& x: weights)
+    {
+        outWeights << x;
+    }
+    weightsFile.close();
+
+}
+
+void MainWindow::loadWeights()
+{
+    weights.clear();
+    QFile weightsFile("weights.dat");
+    weightsFile.open(QIODevice::ReadOnly);
+    QDataStream inWeights(&weightsFile);
+    while (!inWeights.atEnd())
+    {
+        double weightIn;
+        inWeights >> weightIn;
+        weights.push_back(weightIn);
+    }
+    weightsFile.close();
 
 }
 
@@ -436,12 +477,7 @@ QString MainWindow::dataName(const QString& lineIn) const
     }
 }
 
-MainWindow::~MainWindow()
-{
-    delete qGS;
-    delete ui;
-    delete in;
-}
+
 
 
 void MainWindow::on_pushButton_clicked()
@@ -450,14 +486,14 @@ void MainWindow::on_pushButton_clicked()
     QString csvFileName = QFileDialog::getOpenFileName(this,
         tr("Select File"), "", tr("CSVs (*.csv)"));
     //open file
-    QFile csvFile(csvFileName);
-    if (!csvFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+    csvFile = new QFile(csvFileName);
+    if (!csvFile->open(QIODevice::ReadOnly | QIODevice::Text)) {
         QMessageBox msgBox(QMessageBox::Critical, "File will not open",
                            csvFileName, QMessageBox::Ok);
         msgBox.exec();
         exit(EXIT_FAILURE);
     }
-    in = new QTextStream(&csvFile);
+    in = new QTextStream(csvFile);
     if (!in->atEnd())
     {
         QString inputLine = in->readLine();
@@ -484,8 +520,15 @@ void MainWindow::on_pushButton_2_clicked()
 {
     if (!in->atEnd())
     {
-        QString inputLine = in->readLine();
-        processLine(inputLine);
+        try{
+            QString inputLine = in->readLine();
+            processLine(inputLine);
+        }
+        catch(...)
+        {
+            QString error(in->device()->errorString());
+            cerr << error.toStdString() << endl;
+        }
     }
     else
     {

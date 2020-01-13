@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QGraphicsScene>
 #include <QTextStream>
+#include <QFile>
 #include "filternet.hpp"
 #include "fclneuron.h"
 
@@ -65,12 +66,16 @@ private:
     std::vector<double> weights;
     QTextStream *in;
     std::vector<FCLNeuron> finalLayer;
+    QFile *csvFile;
+
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;
     std::vector<double>
         feedForward(const std::vector<std::vector<int>>& imgMap);
     void generateWeights();
+    void saveWeights();
+    void loadWeights();
     void drawFilteredImage();
 };
 #endif // MAINWINDOW_H
