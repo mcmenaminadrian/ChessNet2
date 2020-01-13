@@ -52,10 +52,12 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView_2->setScene(qFS);
     ui->pushButton_2->setDisabled(true);
 
-    //generate and save weights
-    srand (time(NULL));
-    generateWeights();
-    saveWeights();
+    /*****GENERATE WEIGHTS*****/
+    //srand (time(NULL));
+    //generateWeights();
+    //saveWeights();
+    /**************************/
+
     loadWeights();
     for (int layer = 0; layer < CATS; layer++)
     {
