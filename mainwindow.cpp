@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QImage>
 #include <QPixmap>
+#include <QChar>
 #include <vector>
 #include <algorithm>
 #include <ctime>
@@ -143,9 +144,37 @@ void MainWindow::updateJPEG(const QImage& jpegFile)
     ui->graphicsView->scene()->addPixmap(QPixmap::fromImage(jpegFile));
 }
 
+std::vector<double> MainWindow::processData(const QString& datFile)
+{
+    vector<double> expectations;
+    QFile dataHorde(datFile.trimmed());
+    if (!dataHorde.exists())
+    {
+        cerr << "NO FILE!" << endl;
+        exit(EXIT_FAILURE);
+    }
+    bool fOpen = dataHorde.open(QIODevice::ReadOnly|QIODevice::Text);
+    if (!fOpen) {
+        QString errMsg(dataHorde.errorString());
+        cerr << errMsg.toStdString() << endl;
+        exit(dataHorde.error());
+    }
+
+    QString str = dataHorde.readLine();
+    for (int i = 0; i < str.length(); i++) {
+        int x = static_cast<double>(str.at(i).digitValue());
+        expectations.insert(expectations.begin(), x);
+    }
+    dataHorde.close();
+    return expectations;
+}
+
+
 void MainWindow::processLine(const QString& lineIn)
 {
     QString jpegName = graphicName(lineIn);
+    QString datName = dataName(lineIn);
+    vector<double> answers = processData(datName);
     QImage squareImage(jpegName);
     if (squareImage.isNull()) {
         QMessageBox msgBox(QMessageBox::Critical, "File will not open",
@@ -409,6 +438,12 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
         finalLayer.at(fcl).setActivation(sum);
     }
 
+    vector<double> results;
+    for (int x = 0; x < 9; x++)
+    {
+        results.push_back(finalLayer.at(x).getActivation().first);
+    }
+
     emit showLCD0(finalLayer.at(0).getActivation().first);
     emit showLCD1(finalLayer.at(1).getActivation().first);
     emit showLCD2(finalLayer.at(2).getActivation().first);
@@ -420,7 +455,7 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
     emit showLCD8(finalLayer.at(8).getActivation().first);
 
     drawFilteredImage();
-    return vector<double>(0);
+    return results;
 }
 
 void MainWindow::drawFilteredImage()

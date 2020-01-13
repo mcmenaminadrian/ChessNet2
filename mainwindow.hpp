@@ -77,5 +77,6 @@ private:
     void saveWeights();
     void loadWeights();
     void drawFilteredImage();
+    std::vector<double> processData(const QString& datName);
 };
 #endif // MAINWINDOW_H
