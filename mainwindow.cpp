@@ -160,11 +160,16 @@ std::vector<double> MainWindow::processData(const QString& datFile)
         exit(dataHorde.error());
     }
 
-    QString str = dataHorde.readLine();
+    QDataStream dataStreamIn(&dataHorde);
+    char* entry;
+
+    dataStreamIn >> entry;
+    QString str(entry);
     for (int i = 0; i < str.length(); i++) {
         int x = static_cast<double>(str.at(i).digitValue());
         expectations.insert(expectations.begin(), x);
     }
+    delete entry;
     dataHorde.close();
     return expectations;
 }
