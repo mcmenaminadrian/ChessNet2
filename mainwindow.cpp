@@ -55,7 +55,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     /*****GENERATE WEIGHTS*****/
     //srand (time(NULL));
-    //generateWeights();
+    generateWeights();
     //saveWeights();
     /**************************/
 
@@ -227,8 +227,40 @@ void MainWindow::processLine(const QString& lineIn)
     {
         errors.push_back(x - *itExpect++);
     }
+ //   processCorrections(errors);
     ui->pushButton_2->setDisabled(false);
 
+}
+
+void MainWindow::processCorrections(std::vector<double> &errors)
+{
+    const double errorFactor = 0.01;
+    for (auto& x: errors)
+    {
+        x *= errorFactor;
+    }
+    //fully connected layer
+    for (int fcl = 0; fcl < CATS; fcl++)
+    {
+        if (errors.at(fcl) == 0)
+        {
+            continue;
+        }
+        pair<double, double> activation = finalLayer.at(fcl).getActivation();
+        double delta = activation.second;
+        if (delta == 0) {
+            delta = errorFactor;
+        }
+        double soughtCorrection = errors.at(fcl)/delta;
+        //magic numbers for now
+        soughtCorrection = soughtCorrection/200;
+        int offsetIntoWeights = 50 * fcl + startFCL;
+        for (int i = 0; i < totalFCL/50; i++)
+        {
+            weights.at(offsetIntoWeights + i) =
+                    weights.at(offsetIntoWeights + i) - soughtCorrection;
+        }
+    }
 }
 
 void MainWindow::saveWeights()
@@ -264,15 +296,20 @@ void MainWindow::loadWeights()
 void MainWindow::generateWeights()
 {
     //image to top layer
+
+    int weightCount = 0;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-            weights.push_back(r);
+    //        weights.push_back(r);
+            weightCount++;
         }
     }
+    totalTopLayer = weightCount;
+    startSecondLayer = weightCount;
 
     //top layer to second layer
     for (auto f=0; f<FILTERS; f++) {
@@ -281,10 +318,13 @@ void MainWindow::generateWeights()
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-            weights.push_back(r);
+  //          weights.push_back(r);
+            weightCount++;
         }
     }
+    totalSecondLayer = weightCount - startSecondLayer;
 
+    startSecondPool = weightCount;
     //to second 'pool' layer
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<2*2; g++) {
@@ -292,10 +332,13 @@ void MainWindow::generateWeights()
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-            weights.push_back(r);
+    //        weights.push_back(r);
+            weightCount++;
         }
     }
+    totalSecondPool = weightCount - startSecondPool;
 
+    startFCL = weightCount;
     //to fully connected layer
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g< 4 * CATS; g++) {
@@ -303,9 +346,11 @@ void MainWindow::generateWeights()
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-            weights.push_back(r);
+      //      weights.push_back(r);
+            weightCount++;
         }
     }
+    totalFCL = weightCount - startFCL;
 
 }
 

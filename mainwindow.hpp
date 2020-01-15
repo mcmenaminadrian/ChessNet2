@@ -68,6 +68,14 @@ private:
     std::vector<FCLNeuron> finalLayer;
     QFile *csvFile;
 
+    int totalTopLayer;
+    int startSecondLayer;
+    int totalSecondLayer;
+    int startSecondPool;
+    int totalSecondPool;
+    int startFCL;
+    int totalFCL;
+
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;
@@ -78,5 +86,6 @@ private:
     void loadWeights();
     void drawFilteredImage();
     std::vector<double> processData(const QString& datName);
+    void processCorrections(std::vector<double>& errors);
 };
 #endif // MAINWINDOW_H
