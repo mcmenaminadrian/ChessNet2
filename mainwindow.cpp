@@ -32,7 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this, SIGNAL(showLCD0(const double&)),
                      this, SLOT(updateLCD0(const double&)));
     QObject::connect(this, SIGNAL(showLCD1(const double&)),
-                     this, SLOT(updateLCD2(const double&)));
+                     this, SLOT(updateLCD1(const double&)));
     QObject::connect(this, SIGNAL(showLCD2(const double&)),
                      this, SLOT(updateLCD2(const double&)));
     QObject::connect(this, SIGNAL(showLCD3(const double&)),
@@ -220,7 +220,13 @@ void MainWindow::processLine(const QString& lineIn)
         }
     }
 
-    feedForward(imageMap);
+    vector<double> results = feedForward(imageMap);
+    vector<double>::iterator itExpect = answers.begin();
+    vector<double> errors;
+    for (const auto& x: results)
+    {
+        errors.push_back(x - *itExpect++);
+    }
     ui->pushButton_2->setDisabled(false);
 
 }

@@ -173,7 +173,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Empty Square</string>
+     <string>White Piece</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_3">
@@ -181,12 +181,12 @@
      <rect>
       <x>20</x>
       <y>410</y>
-      <width>81</width>
+      <width>91</width>
       <height>16</height>
      </rect>
     </property>
     <property name="text">
-     <string>White Piece</string>
+     <string>Empty Square</string>
     </property>
    </widget>
    <widget class="QLabel" name="label_4">
