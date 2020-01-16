@@ -26,8 +26,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    void setWeight(const int& index, const double& newWeight);
-    double getWeight(const int& index) const;
+    double getWeight(const int& indexA, const int& indexB) const;
 
 public slots:
     void updateJPEG(const QImage& jpegName);
@@ -63,18 +62,12 @@ private:
     Ui::MainWindow *ui;
     QGraphicsScene *qGS, *qFS;
     FilterNet filterNetwork;
-    std::vector<double> weights;
+    std::vector<std::vector<double>> weights;
+    std::vector<std::vector<double>> biases;
     QTextStream *in;
     std::vector<FCLNeuron> finalLayer;
     QFile *csvFile;
 
-    int totalTopLayer;
-    int startSecondLayer;
-    int totalSecondLayer;
-    int startSecondPool;
-    int totalSecondPool;
-    int startFCL;
-    int totalFCL;
 
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;

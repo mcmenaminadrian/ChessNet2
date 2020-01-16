@@ -54,9 +54,9 @@ MainWindow::MainWindow(QWidget *parent)
     ui->pushButton_2->setDisabled(true);
 
     /*****GENERATE WEIGHTS*****/
-    //srand (time(NULL));
+    srand (time(NULL));
     generateWeights();
-    //saveWeights();
+    saveWeights();
     /**************************/
 
     loadWeights();
@@ -235,32 +235,6 @@ void MainWindow::processLine(const QString& lineIn)
 void MainWindow::processCorrections(std::vector<double> &errors)
 {
     const double errorFactor = 0.01;
-    for (auto& x: errors)
-    {
-        x *= errorFactor;
-    }
-    //fully connected layer
-    for (int fcl = 0; fcl < CATS; fcl++)
-    {
-        if (errors.at(fcl) == 0)
-        {
-            continue;
-        }
-        pair<double, double> activation = finalLayer.at(fcl).getActivation();
-        double delta = activation.second;
-        if (delta == 0) {
-            delta = errorFactor;
-        }
-        double soughtCorrection = errors.at(fcl)/delta;
-        //magic numbers for now
-        soughtCorrection = soughtCorrection/200;
-        int offsetIntoWeights = 50 * fcl + startFCL;
-        for (int i = 0; i < totalFCL/50; i++)
-        {
-            weights.at(offsetIntoWeights + i) =
-                    weights.at(offsetIntoWeights + i) - soughtCorrection;
-        }
-    }
 }
 
 void MainWindow::saveWeights()
@@ -268,10 +242,26 @@ void MainWindow::saveWeights()
     QFile weightsFile("weights.dat");
     weightsFile.open(QIODevice::WriteOnly);
     QDataStream outWeights(&weightsFile);
-    for (const auto& x: weights)
+
+    outWeights << static_cast<uint>(weights.size());
+    for (uint i = 0; i < weights.size(); i++)
     {
-        outWeights << x;
+        outWeights << static_cast<uint>(weights.at(i).size());
+        for (const auto& x: weights.at(i))
+        {
+            outWeights << x;
+        }
     }
+    outWeights << static_cast<uint>(biases.size());
+    for (uint i = 0; i < biases.size(); i++)
+    {
+        outWeights << static_cast<uint>(biases.at(i).size());
+        for (const auto& x: biases.at(i))
+        {
+            outWeights << x;
+        }
+    }
+
     weightsFile.close();
 
 }
@@ -282,12 +272,38 @@ void MainWindow::loadWeights()
     QFile weightsFile("weights.dat");
     weightsFile.open(QIODevice::ReadOnly);
     QDataStream inWeights(&weightsFile);
-    while (!inWeights.atEnd())
+    uint weightVectors;
+    inWeights >> weightVectors;
+    for (uint i = 0; i < weightVectors; i++)
     {
-        double weightIn;
-        inWeights >> weightIn;
-        weights.push_back(weightIn);
+        uint weightsInLayer;
+        inWeights >> weightsInLayer;
+        vector<double> readInWeights;
+        for (uint j = 0; j < weightsInLayer; j++)
+        {
+            double weightIn;
+            inWeights >> weightIn;
+            readInWeights.push_back(weightIn);
+        }
+        weights.push_back(readInWeights);
+
     }
+    inWeights >> weightVectors;
+    for (uint i = 0; i < weightVectors; i++)
+    {
+        uint biasInLayer;
+        inWeights >> biasInLayer;
+        vector<double> readInBias;
+        for (uint j = 0; j < biasInLayer; j++)
+        {
+            double biasIn;
+            inWeights >> biasIn;
+            readInBias.push_back(biasIn);
+        }
+        biases.push_back(readInBias);
+
+    }
+
     weightsFile.close();
 
 }
@@ -297,60 +313,63 @@ void MainWindow::generateWeights()
 {
     //image to top layer
 
-    int weightCount = 0;
+    vector<double> layerOneWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-    //        weights.push_back(r);
-            weightCount++;
+            layerOneWeights.push_back(r);
         }
     }
-    totalTopLayer = weightCount;
-    startSecondLayer = weightCount;
+    weights.push_back(layerOneWeights);
+    biases.push_back(vector<double>(FILTERS, -0.5));
+
 
     //top layer to second layer
+    vector<double> layerTwoWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-  //          weights.push_back(r);
-            weightCount++;
+            layerTwoWeights.push_back(r);
         }
     }
-    totalSecondLayer = weightCount - startSecondLayer;
+    weights.push_back(layerTwoWeights);
+    biases.push_back(vector<double>(FILTERS, -0.5));
 
-    startSecondPool = weightCount;
+
     //to second 'pool' layer
+    vector<double> poolLayerWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<2*2; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-    //        weights.push_back(r);
-            weightCount++;
+            poolLayerWeights.push_back(r);
         }
     }
-    totalSecondPool = weightCount - startSecondPool;
+    weights.push_back(poolLayerWeights);
+    biases.push_back(vector<double>(FILTERS, -0.5));
 
-    startFCL = weightCount;
+
     //to fully connected layer
+    vector<double> fclWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g< 4 * CATS; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
             r = r - w;
             r = r / RAND_MAX;
-      //      weights.push_back(r);
-            weightCount++;
+            fclWeights.push_back(r);
         }
     }
-    totalFCL = weightCount - startFCL;
+    weights.push_back(fclWeights);
+    biases.push_back(vector<double>(CATS, -0.5));
 
 }
 
@@ -373,11 +392,6 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
     {
         int offset = FILTERS * FILTERG * FILTERG;
         offset += (i * FILTERG * FILTERG);
-        vector<double> localWeights;
-        for (int j = 0; j < FILTERG * FILTERG; j++)
-        {
-            localWeights.push_back(weights.at(offset + j));
-        }
         for (int row = 0; row < FILTERH; row++) {
             for (int col = 0; col < FILTERW; col++) {
                 double sum = 0.0;
@@ -396,7 +410,7 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
                                 filterNetwork.filterValue(
                                     i, col + coloffset, row + rowoffset);
                         sum += upperLayerActivation.first
-                                * localWeights.at(weightCount++);
+                                * weights.at(1).at(weightCount++);
                     }
                 }
                 filterNetwork.secondConsume(i, row, col, sum);
@@ -427,9 +441,6 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
     for (int filter = 0; filter < FILTERS; filter++) {
         int offset = FILTERS * FILTERG * FILTERG * 2;
         offset += filter * SPAN * SPAN;
-        vector<double> localWeights;
-        localWeights = vector<double>(weights.begin() + offset,
-                                      weights.begin() + offset + SPAN * SPAN);
 
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
@@ -448,7 +459,7 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
                 int index = 0;
                 double sum = 0.0;
                 for (const auto& val: cellValues) {
-                    sum += val * localWeights.at(index++);
+                    sum += val * weights.at(2).at(index++);
                 }
                 filterNetwork.buildPoolConv(filter, row, col, sum, SPAN);
             }
@@ -598,14 +609,11 @@ void MainWindow::on_pushButton_clicked()
 
 }
 
-void MainWindow::setWeight(const int &index, const double &newWeight)
-{
-    weights.at(index) = newWeight;
-}
 
-double MainWindow::getWeight(const int &index) const
+
+double MainWindow::getWeight(const int &indexA, const int &indexB) const
 {
-    return weights.at(index);
+    return weights.at(indexA).at(indexB);
 }
 
 

@@ -106,7 +106,7 @@ void FilterNet::consume(MainWindow* pMW, const int filter,
     double sum = 0;
     int x = 0;
     for (const auto& iVal: value) {
-        sum += pMW->getWeight(offsetIntoWeights + x++) * iVal;
+        sum += pMW->getWeight(0, offsetIntoWeights + x++) * iVal;
     }
     (filtersTop.at(filter)).at(row * FILTERW + col).setActivation(sum);
 }
