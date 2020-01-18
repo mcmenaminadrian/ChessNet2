@@ -2,17 +2,15 @@
 #include "filterneuron.hpp"
 #include "activation.hpp"
 
-#define BIAS 0.1
 
-FilterNeuron::FilterNeuron()
-{
 
-}
+FilterNeuron::FilterNeuron(const int l, const int i):layer(l), index(i)
+{}
 
 std::pair<double, double> FilterNeuron::setActivation(const double& sum)
 {
-    activation = std::pair<double, double>(activationFunction(sum + BIAS),
-                                     activationDerivative(sum + BIAS));
+    activation = std::pair<double, double>(activationFunction(sum),
+                                     activationDerivative(sum));
     return activation;
 }
 

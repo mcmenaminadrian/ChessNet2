@@ -5,9 +5,10 @@
 class FCLNeuron
 {
 public:
-    FCLNeuron();
+    FCLNeuron(const int& i);
 private:
     std::pair<double, double> activation;
+    const int index;
 
 
 public:

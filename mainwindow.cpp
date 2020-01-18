@@ -54,15 +54,15 @@ MainWindow::MainWindow(QWidget *parent)
     ui->pushButton_2->setDisabled(true);
 
     /*****GENERATE WEIGHTS*****/
-    srand (time(NULL));
-    generateWeights();
-    saveWeights();
+    //srand (time(NULL));
+    //generateWeights();
+    //saveWeights();
     /**************************/
 
     loadWeights();
     for (int layer = 0; layer < CATS; layer++)
     {
-        finalLayer.push_back(FCLNeuron());
+        finalLayer.push_back(FCLNeuron(layer));
     }
     ui->lcdNumber->setStyleSheet(
                 """QLCDNumber{background-color: black; color: red;}""");
@@ -390,8 +390,6 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
     //second layer
     for (int i = 0; i < FILTERS; i++)
     {
-        int offset = FILTERS * FILTERG * FILTERG;
-        offset += (i * FILTERG * FILTERG);
         for (int row = 0; row < FILTERH; row++) {
             for (int col = 0; col < FILTERW; col++) {
                 double sum = 0.0;
@@ -410,9 +408,10 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
                                 filterNetwork.filterValue(
                                     i, col + coloffset, row + rowoffset);
                         sum += upperLayerActivation.first
-                                * weights.at(1).at(weightCount++);
+                                * getWeight(1, weightCount++);
                     }
                 }
+                sum += getBias(1, i);
                 filterNetwork.secondConsume(i, row, col, sum);
             }
         }
@@ -439,9 +438,6 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 
     //convolve pool
     for (int filter = 0; filter < FILTERS; filter++) {
-        int offset = FILTERS * FILTERG * FILTERG * 2;
-        offset += filter * SPAN * SPAN;
-
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
                 vector<double> cellValues;
@@ -459,8 +455,9 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
                 int index = 0;
                 double sum = 0.0;
                 for (const auto& val: cellValues) {
-                    sum += val * weights.at(2).at(index++);
+                    sum += val * getWeight(2, index++);
                 }
+                sum += getBias(2, filter);
                 filterNetwork.buildPoolConv(filter, row, col, sum, SPAN);
             }
         }
@@ -490,18 +487,17 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
 
     //fully connected final layer
     int fclCount = 0;
-    const int halfSize = FILTERG/2;
-    int offset = FILTERS * FILTERG * FILTERG * 2;
-    offset += FILTERS * halfSize * halfSize;
+
     for (int fcl = 0; fcl < CATS; fcl++)
     {
         double sum = 0.0;
         for (int filter = 0; filter < FILTERS; filter++) {
             for (int smallPool = 0; smallPool < 4; smallPool++) {
                 sum += filterNetwork.filterSmallPool(filter, smallPool).first *
-                        weights.at(offset + fclCount++);
+                        getWeight(3, fclCount++);
             }
         }
+        sum += getBias(3, fcl);
         finalLayer.at(fcl).setActivation(sum);
     }
 
@@ -609,11 +605,26 @@ void MainWindow::on_pushButton_clicked()
 
 }
 
-
-
 double MainWindow::getWeight(const int &indexA, const int &indexB) const
 {
     return weights.at(indexA).at(indexB);
+}
+
+double MainWindow::getBias(const int &indexA, const int &indexB) const
+{
+    return biases.at(indexA).at(indexB);
+}
+
+void MainWindow::setWeight(const int &indexA, const int &indexB,
+                           const double &weight)
+{
+    weights.at(indexA).at(indexB) = weight;
+}
+
+void MainWindow::setBias(const int &indexA, const int &indexB,
+                         const double &bias)
+{
+    biases.at(indexA).at(indexB) = bias;
 }
 
 

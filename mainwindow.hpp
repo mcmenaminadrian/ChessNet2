@@ -27,6 +27,9 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     double getWeight(const int& indexA, const int& indexB) const;
+    double getBias(const int& indexA, const int& indexB) const;
+    void setWeight(const int& indexA, const int& indexB, const double& weight);
+    void setBias(const int& indexA, const int& indexB, const double& bias);
 
 public slots:
     void updateJPEG(const QImage& jpegName);

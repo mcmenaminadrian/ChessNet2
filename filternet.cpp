@@ -2,16 +2,27 @@
 #include "filternet.hpp"
 #include "filterneuron.hpp"
 
+
+
+
 FilterNet::FilterNet(const int c, const int h, const int w,
                      const int g): count(c), height(h), width(w), grid(g)
 {
 
+    int realFilter = 0;
+    int falseFilter = -1;
 
     //top filters
     std::vector<FilterNeuron> aFilter;
     for (auto y = 0; y < height; y++) {
         for (auto x = 0; x < width; x++) {
-            aFilter.push_back(FilterNeuron());
+            aFilter.push_back(FilterNeuron(realFilter++, x));
+        }
+    }
+    std::vector<FilterNeuron> aaFilter;
+    for (auto y = 0; y < height; y++) {
+        for (auto x = 0; x < width; x++) {
+            aaFilter.push_back(FilterNeuron(realFilter++, x));
         }
     }
 
@@ -19,21 +30,27 @@ FilterNet::FilterNet(const int c, const int h, const int w,
     std::vector<FilterNeuron> bFilter;
     for (auto y = 0; y < height/2; y++) {
         for (auto x = 0; x < width/2; x++) {
-            bFilter.push_back(FilterNeuron());
+            bFilter.push_back(FilterNeuron(falseFilter--, y));
+        }
+    }
+    std::vector<FilterNeuron> bbFilter;
+    for (auto y = 0; y < height/2; y++) {
+        for (auto x = 0; x < width/2; x++) {
+            bbFilter.push_back(FilterNeuron(realFilter++, y));
         }
     }
 
     //final pool
     std::vector<FilterNeuron> cFilter;
     for (auto x = 0; x < 4; x++) {
-        cFilter.push_back(FilterNeuron());
+        cFilter.push_back(FilterNeuron(falseFilter--, x));
     }
 
     for (auto i = 0; i < c; i++) {
         filtersTop.push_back(aFilter);
-        filtersBottom.push_back(aFilter);
+        filtersBottom.push_back(aaFilter);
         poolTop.push_back(bFilter);
-        poolBottom.push_back(bFilter);
+        poolBottom.push_back(bbFilter);
         lastPool.push_back(cFilter);
     }
 
@@ -95,6 +112,7 @@ void FilterNet::secondConsume(const int filter, const int row, const int col,
     filtersBottom.at(filter).at(row * FILTERW + col).setActivation(sum);
 }
 
+
 void FilterNet::consume(MainWindow* pMW, const int filter,
         const int row, const int col, const std::vector<int>& value)
 {
@@ -108,6 +126,7 @@ void FilterNet::consume(MainWindow* pMW, const int filter,
     for (const auto& iVal: value) {
         sum += pMW->getWeight(0, offsetIntoWeights + x++) * iVal;
     }
+    sum += pMW->getBias(0, filter);
     (filtersTop.at(filter)).at(row * FILTERW + col).setActivation(sum);
 }
 
