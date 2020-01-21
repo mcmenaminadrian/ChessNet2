@@ -11,6 +11,7 @@
 #include <vector>
 #include <algorithm>
 #include <ctime>
+#include <cmath>
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "filterneuron.hpp"
@@ -47,6 +48,7 @@ MainWindow::MainWindow(QWidget *parent)
                      this, SLOT(updateLCD7(const double&)));
     QObject::connect(this, SIGNAL(showLCD8(const double&)),
                      this, SLOT(updateLCD8(const double&)));
+    noRecords = true;
     qGS = new QGraphicsScene();
     qFS = new QGraphicsScene();
     ui->graphicsView->setScene(qGS);
@@ -54,7 +56,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->pushButton_2->setDisabled(true);
 
     /*****GENERATE WEIGHTS*****/
-    //srand (time(NULL));
+    srand (time(NULL));
     //generateWeights();
     //saveWeights();
     /**************************/
@@ -83,7 +85,8 @@ MainWindow::MainWindow(QWidget *parent)
     ui->lcdNumber_9->setStyleSheet(
                 """QLCDNumber{background-color: black; color: red;}""");
 
-
+    errors = vector<double>(9, 0);
+    sampleCount = 0;
 }
 
 MainWindow::~MainWindow()
@@ -180,6 +183,9 @@ void MainWindow::processLine(const QString& lineIn)
     QString jpegName = graphicName(lineIn);
     QString datName = dataName(lineIn);
     vector<double> answers = processData(datName);
+    if (noRecords) {
+        records.push_back(LearningRecord(jpegName, datName));
+    }
     QImage squareImage(jpegName);
     if (squareImage.isNull()) {
         QMessageBox msgBox(QMessageBox::Critical, "File will not open",
@@ -220,14 +226,18 @@ void MainWindow::processLine(const QString& lineIn)
         }
     }
 
-    vector<double> results = feedForward(imageMap);
+    vector<pair<double, double>> results = feedForward(imageMap);
     vector<double>::iterator itExpect = answers.begin();
-    vector<double> errors;
+
+    vector<pair<double, double>> errDiff;
+    vector<double>::iterator itErr = errors.begin();
     for (const auto& x: results)
     {
-        errors.push_back(x - *itExpect++);
+        double errVal = x.first - *itExpect++;
+        errDiff.push_back(pair<double, double>(errVal, x.second));
+        *itErr++ += pow(errVal, 2);
     }
- //   processCorrections(errors);
+    records.at(sampleCount++).addError(errDiff);
     ui->pushButton_2->setDisabled(false);
 
 }
@@ -373,8 +383,10 @@ void MainWindow::generateWeights()
 
 }
 
-vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
+vector<pair<double, double>> MainWindow::feedForward(
+        const vector<vector<int>>& imgMap)
 {
+    fclSums.clear();
     ui->pushButton_2->setDisabled(true);
     //top layer
     for (int i = 0; i < FILTERS; i++)
@@ -387,6 +399,7 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
             }
         }
     }
+
     //second layer
     for (int i = 0; i < FILTERS; i++)
     {
@@ -412,6 +425,7 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
                     }
                 }
                 sum += getBias(1, i);
+
                 filterNetwork.secondConsume(i, row, col, sum);
             }
         }
@@ -437,6 +451,7 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
     }
 
     //convolve pool
+    vector<double> poolSums;
     for (int filter = 0; filter < FILTERS; filter++) {
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
@@ -458,10 +473,12 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
                     sum += val * getWeight(2, index++);
                 }
                 sum += getBias(2, filter);
+
                 filterNetwork.buildPoolConv(filter, row, col, sum, SPAN);
             }
         }
     }
+
 
     //second pool
     const int SECOND_SPAN = 3;
@@ -498,24 +515,26 @@ vector<double> MainWindow::feedForward(const vector<vector<int>>& imgMap)
             }
         }
         sum += getBias(3, fcl);
+        fclSums.push_back(sum);
         finalLayer.at(fcl).setActivation(sum);
     }
 
-    vector<double> results;
+
+    vector<pair<double, double>> results;
     for (int x = 0; x < 9; x++)
     {
-        results.push_back(finalLayer.at(x).getActivation().first);
+        results.push_back(finalLayer.at(x).getActivation());
     }
 
-    emit showLCD0(finalLayer.at(0).getActivation().first);
-    emit showLCD1(finalLayer.at(1).getActivation().first);
-    emit showLCD2(finalLayer.at(2).getActivation().first);
-    emit showLCD3(finalLayer.at(3).getActivation().first);
-    emit showLCD4(finalLayer.at(4).getActivation().first);
-    emit showLCD5(finalLayer.at(5).getActivation().first);
-    emit showLCD6(finalLayer.at(6).getActivation().first);
-    emit showLCD7(finalLayer.at(7).getActivation().first);
-    emit showLCD8(finalLayer.at(8).getActivation().first);
+    emit showLCD0(results.at(0).first);
+    emit showLCD1(results.at(1).first);
+    emit showLCD2(results.at(2).first);
+    emit showLCD3(results.at(3).first);
+    emit showLCD4(results.at(4).first);
+    emit showLCD5(results.at(5).first);
+    emit showLCD6(results.at(6).first);
+    emit showLCD7(results.at(7).first);
+    emit showLCD8(results.at(8).first);
 
     drawFilteredImage();
     return results;
@@ -578,8 +597,6 @@ QString MainWindow::dataName(const QString& lineIn) const
 }
 
 
-
-
 void MainWindow::on_pushButton_clicked()
 {
 
@@ -627,6 +644,15 @@ void MainWindow::setBias(const int &indexA, const int &indexB,
     biases.at(indexA).at(indexB) = bias;
 }
 
+void MainWindow::calculateDeltas()
+{
+    deltas.clear();
+    for (const auto& x: records)
+    {
+        deltas.push_back(x.returnDelta());
+    }
+
+}
 
 void MainWindow::on_pushButton_2_clicked()
 {
@@ -644,10 +670,40 @@ void MainWindow::on_pushButton_2_clicked()
     }
     else
     {
-      QMessageBox qMB(QMessageBox::Information,
-                  "File exhausted",
-                  "All images processed",
-                  QMessageBox::Ok);
-      qMB.exec();
+        QMessageBox qMB(QMessageBox::Information,
+                        "File exhausted",
+                        "All images processed: press OK to start learning.",
+                        QMessageBox::Ok);
+        qMB.exec();
+
+        calculateDeltas();
+        noRecords = false;
+        double etaFactor = 0.01;
+        int skip = rand() % 5;
+        vector<double> finalWeights = weights.at(3);
+        for (uint i = skip; i < sampleCount; i += skip)
+        {
+            vector<double> localError = deltas.at(i);
+            for (uint j = 0; j < 9; j++)
+            {
+                double correction = localError.at(j) * etaFactor;
+                if (abs(correction) > 0.000001) {
+                    for (uint k = 0; k < 50; k++)
+                    {
+                        for (uint l = 0; l < 4; l++)
+                        {
+                            double uncorrectedWeight =
+                                    finalWeights.at(j * 4 + k * 36 + l);
+
+                            double newWeight = uncorrectedWeight - correction;
+                            finalWeights.at(j * 4 + k * 36 + l) =
+                                    newWeight;
+                        }
+                    }
+                }
+                //bias correction here
+            }
+        }
+
     }
 }

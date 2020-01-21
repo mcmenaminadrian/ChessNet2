@@ -97,6 +97,7 @@ void FilterNet::buildPoolConv(const int filter, const int row, const int col,
                               const double &value, const int factor)
 {
     poolBottom.at(filter).at(row * FILTERW/factor + col).setActivation(value);
+
 }
 
 void FilterNet::buildSecondPool(const int filter, const int row,
@@ -110,10 +111,11 @@ void FilterNet::secondConsume(const int filter, const int row, const int col,
                               const double &sum)
 {
     filtersBottom.at(filter).at(row * FILTERW + col).setActivation(sum);
+
 }
 
 
-void FilterNet::consume(MainWindow* pMW, const int filter,
+double FilterNet::consume(MainWindow* pMW, const int filter,
         const int row, const int col, const std::vector<int>& value)
 {
 
@@ -128,5 +130,6 @@ void FilterNet::consume(MainWindow* pMW, const int filter,
     }
     sum += pMW->getBias(0, filter);
     (filtersTop.at(filter)).at(row * FILTERW + col).setActivation(sum);
+    return sum;
 }
 

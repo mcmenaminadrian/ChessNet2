@@ -10,7 +10,7 @@ class FilterNet
 {
 public:
     FilterNet(const int c, const int h, const int w, const int g);
-    void consume(MainWindow* pMW, const int filter, const int row,
+    double consume(MainWindow* pMW, const int filter, const int row,
                  const int col, const std::vector<int>& values);
     void secondConsume(const int filter, const int row, const int col,
                        const double& sum);
