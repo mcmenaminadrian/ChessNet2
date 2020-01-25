@@ -16,8 +16,8 @@ public:
                        const double& sum);
     void buildPool(const int filter, const int row, const int col,
                    const double& value, const int factor);
-    void buildPoolConv(const int filter, const int row, const int col,
-                       const double& value, const int factor);
+    std::pair<double, double> buildPoolConv(const int filter, const int row,
+                       const int col, const double& value, const int factor);
     void buildSecondPool(const int filter, const int row, const int col,
                          const double& value, const int factor, const int redW);
     std::pair<double, double>

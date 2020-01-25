@@ -12,11 +12,14 @@
 #include <algorithm>
 #include <ctime>
 #include <cmath>
+#include <map>
+#include <set>
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "filterneuron.hpp"
 #include "filternet.hpp"
 #include "fclneuron.h"
+#include "finalpoolcache.h"
 
 
 
@@ -57,8 +60,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     /*****GENERATE WEIGHTS*****/
     srand (time(NULL));
-    //generateWeights();
-    //saveWeights();
+//    generateWeights();
+//    saveWeights();
     /**************************/
 
     loadWeights();
@@ -87,6 +90,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     errors = vector<double>(9, 0);
     sampleCount = 0;
+    secondPoolMapped = false;
+
 }
 
 MainWindow::~MainWindow()
@@ -451,8 +456,11 @@ vector<pair<double, double>> MainWindow::feedForward(
     }
 
     //convolve pool
+    map<int, set<int>>::iterator lpmIT;
     vector<double> poolSums;
+    vector<vector<pair<double, double>>> imagePoolBActivations;
     for (int filter = 0; filter < FILTERS; filter++) {
+        vector<pair<double, double>> localPoolBActivations;
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
                 vector<double> cellValues;
@@ -462,6 +470,23 @@ vector<pair<double, double>> MainWindow::feedForward(
                                 (col + iCol >= FILTERW/SPAN)) {
                             cellValues.push_back(0);
                             continue;
+                        }
+                        if (!secondPoolMapped)
+                        {
+                            int checking = (row + iRow) * FILTERW/SPAN +
+                                    col + iCol;
+                            lpmIT = secondPoolMap.find(checking);
+
+                            if (lpmIT == secondPoolMap.end())
+                            {
+                                set<int> nodes;
+                                nodes.insert(row * FILTERW/SPAN + col);
+                                secondPoolMap[checking] = nodes;
+                            }
+                            else
+                            {
+                                lpmIT->second.insert(row * FILTERW/SPAN + col);
+                            }
                         }
                         cellValues.push_back(filterNetwork.poolValue(
                             filter, col + iCol, row + iRow, SPAN).first);
@@ -474,17 +499,24 @@ vector<pair<double, double>> MainWindow::feedForward(
                 }
                 sum += getBias(2, filter);
 
-                filterNetwork.buildPoolConv(filter, row, col, sum, SPAN);
+                localPoolBActivations.push_back(
+                            filterNetwork.buildPoolConv(filter, row,
+                                                        col, sum, SPAN));
             }
         }
+        imagePoolBActivations.push_back(localPoolBActivations);
     }
+    secondPoolMapped = true;
+    secondPoolActivationsCache.push_back(imagePoolBActivations);
 
 
     //second pool
     const int SECOND_SPAN = 3;
     const int REDH = FILTERH/SPAN;
     const int REDW = FILTERW/SPAN;
+    vector<vector<FinalPoolCache>> thisImageFinalPoolCache;
     for (int filter = 0; filter < FILTERS; filter++) {
+        vector<FinalPoolCache> localCache;
         for (int row = 0; row <= REDH - SECOND_SPAN; row += SECOND_SPAN) {
             for (int col = 0; col <= REDW - SECOND_SPAN; col+= SECOND_SPAN) {
                 vector<double> cellValues;
@@ -498,9 +530,16 @@ vector<pair<double, double>> MainWindow::feedForward(
                                                std::end(cellValues));
                 filterNetwork.buildSecondPool(filter, row, col, *maxVal,
                                               SECOND_SPAN, REDW);
+                int position = col + row * REDW;
+                int maxPosition = distance(begin(cellValues), maxVal);
+                position += (maxPosition/SECOND_SPAN) * REDW;
+                position += maxPosition%SECOND_SPAN;
+                localCache.push_back(FinalPoolCache(position));
             }
         }
+        thisImageFinalPoolCache.push_back(localCache);
     }
+    poolFiltersCache.push_back(thisImageFinalPoolCache);
 
     //fully connected final layer
     int fclCount = 0;
@@ -651,7 +690,6 @@ void MainWindow::calculateDeltas()
     {
         deltas.push_back(x.returnDelta());
     }
-
 }
 
 void MainWindow::on_pushButton_2_clicked()
@@ -676,34 +714,137 @@ void MainWindow::on_pushButton_2_clicked()
                         QMessageBox::Ok);
         qMB.exec();
 
+        //Take delta for every input
+
         calculateDeltas();
-        noRecords = false;
-        double etaFactor = 0.01;
-        int skip = rand() % 5;
-        vector<double> finalWeights = weights.at(3);
-        for (uint i = skip; i < sampleCount; i += skip)
+        uint numOut = 0;
+        double totalError = 0;
+        for (const auto& x: errors)
         {
-            vector<double> localError = deltas.at(i);
-            for (uint j = 0; j < 9; j++)
+            totalError += x;
+        }
+        cout << "Total Error is " << totalError << endl;
+        //final layer
+        vector<double> finalWeights = weights.at(3);
+
+        vector<double> finalBiases = biases.at(3);
+        //at this level we can just use average corrections
+        vector<double> avErrors(0, 9);
+        for (uint i = 0; i < 9; i++)
+        {
+            double totalDelta = 0;
+            for (const auto& x: deltas)
             {
-                double correction = localError.at(j) * etaFactor;
-                if (abs(correction) > 0.000001) {
+                totalDelta += x.at(i);
+            }
+            avErrors.push_back(totalDelta/deltas.size());
+        }
+        for (const auto& x: avErrors)
+        {
+            cerr << "Mean delta for " << numOut++ << " is " << x << endl;
+        }
+
+
+        //now have to go with every image
+        //calculate the per neuron contribution
+        vector<double> fibreDeltas(200, 0);
+        vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
+                poolFiltersCache.begin();
+        vector<vector<vector<pair<double, double>>>>::iterator poolBIterator =
+                secondPoolActivationsCache.begin();
+        vector<double> uncorrectedSecondPoolWeights = weights.at(2);
+        for (const auto& image: records)
+        {
+            for (uint i = 0; i < 200; i++)
+            {
+                for (uint j = 0; j < 9; j++)
+                {
+                    double totalDelta = image.returnDelta().at(j);
+                    if (totalDelta == 0)
+                    {
+                        continue;
+                    }
+
+                    fibreDeltas.at(i) += totalDelta *
+                            finalWeights.at(i + j * 4);
+
+                }
+            }
+
+
+            //back propagate the error
+            //one neuron at a time
+            vector<vector<FinalPoolCache>> imageFPCache = *fpcIterator++;
+            vector<vector<pair<double, double>>> imagePoolBCache =
+                    *poolBIterator++;
+            for (int i = 0; i < 50; i++)
+            {
+                map<int, double> fpcCorrections;
+                vector<FinalPoolCache> localCache = imageFPCache.at(i);
+                vector<pair<double, double>> localActivations =
+                        imagePoolBCache.at(i);
+                map<int, double>::iterator corrIT;
+                int cacheCount = 0;
+                for (const auto& x: localCache)
+                {
+                    double currentCorrection = 0;
+                    corrIT = fpcCorrections.find(x.getPixel());
+                    if (corrIT != fpcCorrections.end())
+                    {
+                        currentCorrection = corrIT->second;
+                    }
+                    fpcCorrections[x.getPixel()] = currentCorrection +
+                            localActivations.at(x.getPixel()).second *
+                            fibreDeltas.at(i * 4 + cacheCount++);
+                }
+                for (const auto& topNeuron: fpcCorrections)
+                {
+                    set<int> y = secondPoolMap[topNeuron.first];
+
+                    for (set<int>::iterator neuIT = y.begin();
+                         neuIT != y.end(); neuIT++)
+                    {
+                        for (int j = 0; j < 4; j++)
+                        {
+                            uncorrectedSecondPoolWeights.at(i * 4 + j) =
+                                    uncorrectedSecondPoolWeights.
+                                    at(i * 4 + j) - topNeuron.second * eta;
+                        }
+                    }
+
+
+
+                }
+
+            }
+
+
+                //reset to zero
+                fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
+                for (uint j = 0; j < 9; j++)
+                {
+                    double correction = avErrors.at(j) * eta;
+                    finalBiases.at(j) -= correction;
                     for (uint k = 0; k < 50; k++)
                     {
                         for (uint l = 0; l < 4; l++)
                         {
-                            double uncorrectedWeight =
-                                    finalWeights.at(j * 4 + k * 36 + l);
-
+                            double uncorrectedWeight = finalWeights.at(
+                                        j * 4 + k * 36 + l);
                             double newWeight = uncorrectedWeight - correction;
-                            finalWeights.at(j * 4 + k * 36 + l) =
-                                    newWeight;
+                            finalWeights.at(j * 4 + k * 36 + l) = newWeight;
                         }
                     }
                 }
-                //bias correction here
-            }
+
+
+                weights.at(2) = uncorrectedSecondPoolWeights;
+                saveWeights();
+
+
+                }
         }
 
-    }
+
+
 }

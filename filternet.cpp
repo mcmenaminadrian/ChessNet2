@@ -93,11 +93,12 @@ void FilterNet::buildPool(const int filter, const int row, const int col,
             at((row * FILTERW/factor) / factor + col / factor).setPool(value);
 }
 
-void FilterNet::buildPoolConv(const int filter, const int row, const int col,
-                              const double &value, const int factor)
+std::pair<double, double> FilterNet::buildPoolConv(const int filter,
+                  const int row, const int col, const double &value,
+                                                   const int factor)
 {
-    poolBottom.at(filter).at(row * FILTERW/factor + col).setActivation(value);
-
+    return poolBottom.at(filter).at(row * FILTERW/factor + col).
+            setActivation(value);
 }
 
 void FilterNet::buildSecondPool(const int filter, const int row,

@@ -7,9 +7,12 @@
 #include <QFile>
 #include <vector>
 #include <utility>
+#include <map>
+#include <set>
 #include "filternet.hpp"
 #include "fclneuron.h"
 #include "learningrecord.h"
+#include "finalpoolcache.h"
 
 #define FILTERH 12
 #define FILTERW 12
@@ -77,6 +80,12 @@ private:
     uint sampleCount;
     std::vector<double> fclSums;
     std::vector<std::vector<double>> deltas;
+    std::vector<std::vector<std::vector<FinalPoolCache>>> poolFiltersCache;
+    std::vector<std::vector<std::vector<std::pair<double, double>>>>
+        secondPoolActivationsCache;
+    bool secondPoolMapped;
+    std::map<int, std::set<int>> secondPoolMap;
+    const double eta = 0.05;
 
 
     void processLine(const QString& lineIn);

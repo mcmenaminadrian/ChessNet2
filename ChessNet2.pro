@@ -19,6 +19,7 @@ SOURCES += \
     fclneuron.cpp \
     filternet.cpp \
     filterneuron.cpp \
+    finalpoolcache.cpp \
     learningrecord.cpp \
     main.cpp \
     mainwindow.cpp
@@ -28,6 +29,7 @@ HEADERS += \
     fclneuron.h \
     filternet.hpp \
     filterneuron.hpp \
+    finalpoolcache.h \
     learningrecord.h \
     mainwindow.hpp
 
