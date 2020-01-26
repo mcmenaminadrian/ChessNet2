@@ -753,6 +753,7 @@ void MainWindow::on_pushButton_2_clicked()
         vector<vector<vector<pair<double, double>>>>::iterator poolBIterator =
                 secondPoolActivationsCache.begin();
         vector<double> uncorrectedSecondPoolWeights = weights.at(2);
+        vector<double> uncorrectedSecondPoolBiases = biases.at(2);
         for (const auto& image: records)
         {
             for (uint i = 0; i < 200; i++)
@@ -806,10 +807,11 @@ void MainWindow::on_pushButton_2_clicked()
                     {
                         for (int j = 0; j < 4; j++)
                         {
-                            uncorrectedSecondPoolWeights.at(i * 4 + j) =
-                                    uncorrectedSecondPoolWeights.
-                                    at(i * 4 + j) - topNeuron.second * eta;
+                            uncorrectedSecondPoolWeights.at(i * 4 + j) -=
+                                     topNeuron.second * eta;
                         }
+                        uncorrectedSecondPoolBiases.at(i * 4 + *neuIT) -=
+                                 topNeuron.second * eta;
                     }
 
 
@@ -834,17 +836,18 @@ void MainWindow::on_pushButton_2_clicked()
                             double newWeight = uncorrectedWeight - correction;
                             finalWeights.at(j * 4 + k * 36 + l) = newWeight;
                         }
+
                     }
                 }
 
 
                 weights.at(2) = uncorrectedSecondPoolWeights;
+                weights.at(3) = finalWeights;
+                biases.at(2) = uncorrectedSecondPoolBiases;
+                biases.at(3) = finalBiases;
                 saveWeights();
-
 
                 }
         }
-
-
 
 }
