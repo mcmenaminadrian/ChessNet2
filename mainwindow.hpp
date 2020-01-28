@@ -81,10 +81,15 @@ private:
     std::vector<double> fclSums;
     std::vector<std::vector<double>> deltas;
     std::vector<std::vector<std::vector<FinalPoolCache>>> poolFiltersCache;
+    std::vector<std::vector<std::vector<FinalPoolCache>>> topPoolFiltersCache;
     std::vector<std::vector<std::vector<std::pair<double, double>>>>
         secondPoolActivationsCache;
+    std::vector<std::vector<std::vector<std::pair<double, double>>>>
+        firstPoolActivationsCache;
     bool secondPoolMapped;
+    bool firstPoolMapped;
     std::map<int, std::set<int>> secondPoolMap;
+    std::map<int, std::set<int>> firstPoolMap;
     const double eta = 0.05;
 
 

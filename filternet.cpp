@@ -105,13 +105,15 @@ void FilterNet::buildSecondPool(const int filter, const int row,
                                 const int col, const double &value,
                                 const int factor, const int REDW)
 {
-    lastPool.at(filter).at((row * REDW/factor)/factor + col/factor).setPool(value);
+    lastPool.at(filter).at((row * REDW/factor)/factor +
+                           col/factor).setPool(value);
 }
 
-void FilterNet::secondConsume(const int filter, const int row, const int col,
+std::pair<double, double> FilterNet::secondConsume(
+        const int filter, const int row, const int col,
                               const double &sum)
 {
-    filtersBottom.at(filter).at(row * FILTERW + col).setActivation(sum);
+    return filtersBottom.at(filter).at(row * FILTERW + col).setActivation(sum);
 
 }
 
@@ -129,7 +131,7 @@ double FilterNet::consume(MainWindow* pMW, const int filter,
     for (const auto& iVal: value) {
         sum += pMW->getWeight(0, offsetIntoWeights + x++) * iVal;
     }
-    sum += pMW->getBias(0, filter);
+    sum += pMW->getBias(0, filter * FILTERH * FILTERW + row * FILTERW + col);
     (filtersTop.at(filter)).at(row * FILTERW + col).setActivation(sum);
     return sum;
 }

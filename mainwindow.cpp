@@ -61,7 +61,7 @@ MainWindow::MainWindow(QWidget *parent)
     /*****GENERATE WEIGHTS*****/
     srand (time(NULL));
 //    generateWeights();
-//    saveWeights();
+//   saveWeights();
     /**************************/
 
     loadWeights();
@@ -70,7 +70,7 @@ MainWindow::MainWindow(QWidget *parent)
         finalLayer.push_back(FCLNeuron(layer));
     }
     ui->lcdNumber->setStyleSheet(
-                """QLCDNumber{background-color: black; color: red;}""");
+                """QLCDNumber{background-color: black; foregroud-color: red;}""");
     ui->lcdNumber_2->setStyleSheet(
                 """QLCDNumber{background-color: black; color: red;}""");
     ui->lcdNumber_3->setStyleSheet(
@@ -91,7 +91,7 @@ MainWindow::MainWindow(QWidget *parent)
     errors = vector<double>(9, 0);
     sampleCount = 0;
     secondPoolMapped = false;
-
+    firstPoolMapped = false;
 }
 
 MainWindow::~MainWindow()
@@ -304,6 +304,7 @@ void MainWindow::loadWeights()
 
     }
     inWeights >> weightVectors;
+    biases.clear();
     for (uint i = 0; i < weightVectors; i++)
     {
         uint biasInLayer;
@@ -328,33 +329,33 @@ void MainWindow::generateWeights()
 {
     //image to top layer
 
+    vector<double> layerZeroWeights;
+    for (auto f=0; f<FILTERS; f++) {
+        for (auto g=0; g<FILTERG*FILTERG; g++) {
+            double r = static_cast <double>(rand());
+            double w = static_cast <double>(rand());
+            r = (r - w)/2;
+            r = r / RAND_MAX;
+            layerZeroWeights.push_back(r);
+        }
+    }
+    weights.push_back(layerZeroWeights);
+    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW, -0.5));
+
+
+    //top layer to second layer
     vector<double> layerOneWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
-            r = r - w;
+            r = (r - w)/2;
             r = r / RAND_MAX;
             layerOneWeights.push_back(r);
         }
     }
     weights.push_back(layerOneWeights);
-    biases.push_back(vector<double>(FILTERS, -0.5));
-
-
-    //top layer to second layer
-    vector<double> layerTwoWeights;
-    for (auto f=0; f<FILTERS; f++) {
-        for (auto g=0; g<FILTERG*FILTERG; g++) {
-            double r = static_cast <double>(rand());
-            double w = static_cast <double>(rand());
-            r = r - w;
-            r = r / RAND_MAX;
-            layerTwoWeights.push_back(r);
-        }
-    }
-    weights.push_back(layerTwoWeights);
-    biases.push_back(vector<double>(FILTERS, -0.5));
+    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW, -0.5));
 
 
     //to second 'pool' layer
@@ -363,26 +364,27 @@ void MainWindow::generateWeights()
         for (auto g=0; g<2*2; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
-            r = r - w;
+            r = (r - w)/2;
             r = r / RAND_MAX;
             poolLayerWeights.push_back(r);
         }
     }
     weights.push_back(poolLayerWeights);
-    biases.push_back(vector<double>(FILTERS, -0.5));
+    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW / 4, -0.5));
 
 
     //to fully connected layer
     vector<double> fclWeights;
     for (auto f=0; f<FILTERS; f++) {
-        for (auto g=0; g< 4 * CATS; g++) {
+        for (auto g=0; g < 4 * CATS; g++) {
             double r = static_cast <double>(rand());
             double w = static_cast <double>(rand());
-            r = r - w;
+            r = (r - w)/2;
             r = r / RAND_MAX;
             fclWeights.push_back(r);
         }
     }
+
     weights.push_back(fclWeights);
     biases.push_back(vector<double>(CATS, -0.5));
 
@@ -406,8 +408,11 @@ vector<pair<double, double>> MainWindow::feedForward(
     }
 
     //second layer
+    map<int, set<int>>::iterator tpmIT;
+    vector<vector<pair<double, double>>> imagePoolAActivations;
     for (int i = 0; i < FILTERS; i++)
     {
+        vector<pair<double, double>> localPoolAActivations;
         for (int row = 0; row < FILTERH; row++) {
             for (int col = 0; col < FILTERW; col++) {
                 double sum = 0.0;
@@ -422,6 +427,24 @@ vector<pair<double, double>> MainWindow::feedForward(
                             weightCount++;
                             continue;
                         }
+                        if (!firstPoolMapped)
+                        {
+                            int checking = (row + rowoffset) * FILTERW +
+                                    col + coloffset;
+                            tpmIT = firstPoolMap.find(checking);
+
+                            if (tpmIT == firstPoolMap.end())
+                            {
+                                set<int> nodes;
+                                nodes.insert(row * FILTERW + col);
+                                firstPoolMap[checking] = nodes;
+                            }
+                            else
+                            {
+                                tpmIT->second.insert(row * FILTERW + col);
+                            }
+                        }
+
                         pair<double, double> upperLayerActivation =
                                 filterNetwork.filterValue(
                                     i, col + coloffset, row + rowoffset);
@@ -429,12 +452,16 @@ vector<pair<double, double>> MainWindow::feedForward(
                                 * getWeight(1, weightCount++);
                     }
                 }
-                sum += getBias(1, i);
+                sum += getBias(1, i * FILTERW * FILTERH + row * FILTERW + col);
 
-                filterNetwork.secondConsume(i, row, col, sum);
+                localPoolAActivations.push_back(
+                            filterNetwork.secondConsume(i, row, col, sum));
             }
         }
+        imagePoolAActivations.push_back(localPoolAActivations);
     }
+    firstPoolMapped = true;
+    firstPoolActivationsCache.push_back(imagePoolAActivations);
 
     //pool
     const int SPAN = 2;
@@ -497,7 +524,8 @@ vector<pair<double, double>> MainWindow::feedForward(
                 for (const auto& val: cellValues) {
                     sum += val * getWeight(2, index++);
                 }
-                sum += getBias(2, filter);
+                sum += getBias(2, filter * FILTERW * FILTERH/(2 * SPAN) +
+                               row * FILTERW/SPAN + col);
 
                 localPoolBActivations.push_back(
                             filterNetwork.buildPoolConv(filter, row,
@@ -508,7 +536,6 @@ vector<pair<double, double>> MainWindow::feedForward(
     }
     secondPoolMapped = true;
     secondPoolActivationsCache.push_back(imagePoolBActivations);
-
 
     //second pool
     const int SECOND_SPAN = 3;
@@ -748,12 +775,15 @@ void MainWindow::on_pushButton_2_clicked()
         //now have to go with every image
         //calculate the per neuron contribution
         vector<double> fibreDeltas(200, 0);
+        vector<double> secondFilterFibreDeltas(1800, 0);
+        vector<double> firstFilterFibreDeltas(7200, 0);
         vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
                 poolFiltersCache.begin();
         vector<vector<vector<pair<double, double>>>>::iterator poolBIterator =
                 secondPoolActivationsCache.begin();
         vector<double> uncorrectedSecondPoolWeights = weights.at(2);
         vector<double> uncorrectedSecondPoolBiases = biases.at(2);
+
         for (const auto& image: records)
         {
             for (uint i = 0; i < 200; i++)
@@ -808,10 +838,12 @@ void MainWindow::on_pushButton_2_clicked()
                         for (int j = 0; j < 4; j++)
                         {
                             uncorrectedSecondPoolWeights.at(i * 4 + j) -=
-                                     topNeuron.second * eta;
+                                    topNeuron.second * eta;
                         }
-                        uncorrectedSecondPoolBiases.at(i * 4 + *neuIT) -=
-                                 topNeuron.second * eta;
+                        uncorrectedSecondPoolBiases.at(i * 36 + *neuIT) -=
+                                topNeuron.second * eta;
+                        secondFilterFibreDeltas.at(i * 36 + *neuIT) +=
+                                topNeuron.second;
                     }
 
 
@@ -821,33 +853,36 @@ void MainWindow::on_pushButton_2_clicked()
             }
 
 
-                //reset to zero
-                fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
-                for (uint j = 0; j < 9; j++)
-                {
-                    double correction = avErrors.at(j) * eta;
-                    finalBiases.at(j) -= correction;
-                    for (uint k = 0; k < 50; k++)
-                    {
-                        for (uint l = 0; l < 4; l++)
-                        {
-                            double uncorrectedWeight = finalWeights.at(
-                                        j * 4 + k * 36 + l);
-                            double newWeight = uncorrectedWeight - correction;
-                            finalWeights.at(j * 4 + k * 36 + l) = newWeight;
-                        }
-
-                    }
-                }
+            //reset to zero
+            fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
 
 
-                weights.at(2) = uncorrectedSecondPoolWeights;
-                weights.at(3) = finalWeights;
-                biases.at(2) = uncorrectedSecondPoolBiases;
-                biases.at(3) = finalBiases;
-                saveWeights();
 
-                }
+
         }
+
+        for (uint j = 0; j < 9; j++)
+        {
+            double correction = avErrors.at(j) * eta;
+            finalBiases.at(j) -= correction;
+            for (uint k = 0; k < 50; k++)
+            {
+                for (uint l = 0; l < 4; l++)
+                {
+                    double uncorrectedWeight = finalWeights.at(
+                                j * 4 + k * 36 + l);
+                    double newWeight = uncorrectedWeight - correction;
+                    finalWeights.at(j * 4 + k * 36 + l) = newWeight;
+                }
+
+            }
+        }
+
+        weights.at(2) = uncorrectedSecondPoolWeights;
+        weights.at(3) = finalWeights;
+        biases.at(2) = uncorrectedSecondPoolBiases;
+        biases.at(3) = finalBiases;
+        saveWeights();
+    }
 
 }
