@@ -90,7 +90,7 @@ private:
     bool firstPoolMapped;
     std::map<int, std::set<int>> secondPoolMap;
     std::map<int, std::set<int>> firstPoolMap;
-    const double eta = 0.05;
+    const double eta = 0.005;
 
 
     void processLine(const QString& lineIn);
@@ -103,7 +103,6 @@ private:
     void loadWeights();
     void drawFilteredImage();
     std::vector<double> processData(const QString& datName);
-    void processCorrections(std::vector<double>& errors);
     void calculateDeltas();
     std::vector<LearningRecord> records;
     bool noRecords;

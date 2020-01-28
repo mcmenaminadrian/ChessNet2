@@ -70,7 +70,7 @@ MainWindow::MainWindow(QWidget *parent)
         finalLayer.push_back(FCLNeuron(layer));
     }
     ui->lcdNumber->setStyleSheet(
-                """QLCDNumber{background-color: black; foregroud-color: red;}""");
+                """QLCDNumber{background-color: black; color: red;}""");
     ui->lcdNumber_2->setStyleSheet(
                 """QLCDNumber{background-color: black; color: red;}""");
     ui->lcdNumber_3->setStyleSheet(
@@ -245,11 +245,6 @@ void MainWindow::processLine(const QString& lineIn)
     records.at(sampleCount++).addError(errDiff);
     ui->pushButton_2->setDisabled(false);
 
-}
-
-void MainWindow::processCorrections(std::vector<double> &errors)
-{
-    const double errorFactor = 0.01;
 }
 
 void MainWindow::saveWeights()
@@ -465,7 +460,9 @@ vector<pair<double, double>> MainWindow::feedForward(
 
     //pool
     const int SPAN = 2;
+    vector<vector<FinalPoolCache>> thisImageFirstPoolCache;
     for (int filter = 0; filter < FILTERS; filter++) {
+        vector<FinalPoolCache> firstLocalPoolCache;
         for (int row = 0; row <= FILTERH - SPAN; row += SPAN) {
             for (int col = 0; col <= FILTERW - SPAN; col+= SPAN) {
                 vector<double> cellValues;
@@ -478,9 +475,16 @@ vector<pair<double, double>> MainWindow::feedForward(
                 auto maxVal = std::max_element(std::begin(cellValues),
                                                std::end(cellValues));
                 filterNetwork.buildPool(filter, row, col, *maxVal, SPAN);
+                int position = col + row * FILTERW;
+                int maxPosition = distance(begin(cellValues), maxVal);
+                position += (maxPosition/SPAN) * FILTERW;
+                position += maxPosition%SPAN;
+                firstLocalPoolCache.push_back(FinalPoolCache(position));
             }
         }
+        thisImageFirstPoolCache.push_back(firstLocalPoolCache);
     }
+    topPoolFiltersCache.push_back(thisImageFirstPoolCache);
 
     //convolve pool
     map<int, set<int>>::iterator lpmIT;
@@ -777,12 +781,19 @@ void MainWindow::on_pushButton_2_clicked()
         vector<double> fibreDeltas(200, 0);
         vector<double> secondFilterFibreDeltas(1800, 0);
         vector<double> firstFilterFibreDeltas(7200, 0);
+        vector<double> inputFilterFibreDeltas(7200, 0);
         vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
                 poolFiltersCache.begin();
         vector<vector<vector<pair<double, double>>>>::iterator poolBIterator =
                 secondPoolActivationsCache.begin();
+        vector<vector<vector<FinalPoolCache>>>::iterator tpIterator =
+                topPoolFiltersCache.begin();
+        vector<vector<vector<pair<double, double>>>>::iterator poolAIterator =
+                firstPoolActivationsCache.begin();
         vector<double> uncorrectedSecondPoolWeights = weights.at(2);
         vector<double> uncorrectedSecondPoolBiases = biases.at(2);
+        vector<double> uncorrectedFirstPoolWeights = weights.at(1);
+        vector<double> uncorrectedFirstPoolBiases = biases.at(1);
 
         for (const auto& image: records)
         {
@@ -845,19 +856,66 @@ void MainWindow::on_pushButton_2_clicked()
                         secondFilterFibreDeltas.at(i * 36 + *neuIT) +=
                                 topNeuron.second;
                     }
-
-
-
                 }
 
             }
 
 
+            //bigger filter
+
+
+            vector<vector<FinalPoolCache>> imageTPCache = *tpIterator++;
+            vector<vector<pair<double, double>>> imagePoolACache =
+                    *poolAIterator++;
+            for (int i = 0; i < 50; i++)
+            {
+                map<int, double> spCorrections;
+                vector<FinalPoolCache> localTPCache = imageTPCache.at(i);
+                vector<pair<double, double>> localPActivations =
+                        imagePoolACache.at(i);
+                map<int, double>::iterator corrAIT;
+                int cacheCount = 0;
+                for (const auto& x: localTPCache)
+                {
+                    double currentCorrection = 0;
+                    corrAIT = spCorrections.find(x.getPixel());
+                    if (corrAIT != spCorrections.end())
+                    {
+                        currentCorrection = corrAIT->second;
+                    }
+                    spCorrections[x.getPixel()] = currentCorrection +
+                            localPActivations.at(x.getPixel()).second *
+                            secondFilterFibreDeltas.at(i * 36 + cacheCount++);
+                }
+                for (const auto& topNeuron: spCorrections)
+                {
+                    set<int> y = firstPoolMap[topNeuron.first];
+
+                    for (set<int>::iterator neuIT = y.begin();
+                         neuIT != y.end(); neuIT++)
+                    {
+                        for (int j = 0; j < 25; j++)
+                        {
+                            uncorrectedFirstPoolWeights.at(i * 25 + j) -=
+                                    topNeuron.second * eta;
+                        }
+                        uncorrectedFirstPoolBiases.at(i * 144 + *neuIT) -=
+                                topNeuron.second * eta;
+                        firstFilterFibreDeltas.at(i * 144 + *neuIT) +=
+                                topNeuron.second;
+                    }
+                }
+
+            }
+
+
+
             //reset to zero
             fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
-
-
-
+            fill(secondFilterFibreDeltas.begin(),
+                 secondFilterFibreDeltas.end(), 0);
+            fill(firstFilterFibreDeltas.begin(),
+                 firstFilterFibreDeltas.end(), 0);
 
         }
 
@@ -878,6 +936,8 @@ void MainWindow::on_pushButton_2_clicked()
             }
         }
 
+        weights.at(1) = uncorrectedFirstPoolWeights;
+        biases.at(1) = uncorrectedFirstPoolBiases;
         weights.at(2) = uncorrectedSecondPoolWeights;
         weights.at(3) = finalWeights;
         biases.at(2) = uncorrectedSecondPoolBiases;
