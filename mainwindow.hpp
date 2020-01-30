@@ -88,7 +88,7 @@ private:
         firstPoolActivationsCache;
     bool secondPoolMapped;
     bool firstPoolMapped;
-    std::map<int, std::set<int>> secondPoolMap;
+    std::map<int, std::vector<int>> secondPoolMap;
     std::map<int, std::set<int>> firstPoolMap;
     const double eta = 0.005;
 

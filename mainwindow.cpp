@@ -487,36 +487,47 @@ vector<pair<double, double>> MainWindow::feedForward(
     topPoolFiltersCache.push_back(thisImageFirstPoolCache);
 
     //convolve pool
-    map<int, set<int>>::iterator lpmIT;
+    map<int, vector<int>>::iterator lpmIT;
     vector<double> poolSums;
     vector<vector<pair<double, double>>> imagePoolBActivations;
+    int checking = -1;
     for (int filter = 0; filter < FILTERS; filter++) {
         vector<pair<double, double>> localPoolBActivations;
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
                 vector<double> cellValues;
                 for (int iRow = 0; iRow < SPAN; iRow++) {
-                    for (int iCol = 0; iCol < SPAN; iCol++) {
+                    for (int iCol = 0; iCol < SPAN; iCol++) {                       
+                        if (!secondPoolMapped) {
+                            checking = (row + iRow) * FILTERW/SPAN + col
+                                    + iCol;
+                            lpmIT = secondPoolMap.find(row * FILTERW/SPAN + col);
+                        }
                         if ((row + iRow >= FILTERH/SPAN) ||
                                 (col + iCol >= FILTERW/SPAN)) {
                             cellValues.push_back(0);
+                            if (!secondPoolMapped) {
+                                if (lpmIT == secondPoolMap.end()) {
+                                    secondPoolMap.insert(
+                                                pair<int, vector<int>>
+                                                (row * FILTERW/SPAN + col,
+                                                 vector<int>(1, -1)));
+                                    continue;
+                                }
+                                lpmIT->second.push_back(-1);
+                                continue;
+                            }
                             continue;
                         }
                         if (!secondPoolMapped)
                         {
-                            int checking = (row + iRow) * FILTERW/SPAN +
-                                    col + iCol;
-                            lpmIT = secondPoolMap.find(checking);
-
                             if (lpmIT == secondPoolMap.end())
                             {
-                                set<int> nodes;
-                                nodes.insert(row * FILTERW/SPAN + col);
-                                secondPoolMap[checking] = nodes;
-                            }
-                            else
-                            {
-                                lpmIT->second.insert(row * FILTERW/SPAN + col);
+                                secondPoolMap.insert(pair<int, vector<int>>
+                                                     (row * FILTERW/SPAN + col,
+                                                      vector<int>(1, checking)));
+                            } else {
+                                lpmIT->second.push_back(checking);
                             }
                         }
                         cellValues.push_back(filterNetwork.poolValue(
@@ -537,8 +548,9 @@ vector<pair<double, double>> MainWindow::feedForward(
             }
         }
         imagePoolBActivations.push_back(localPoolBActivations);
+        secondPoolMapped = true;
     }
-    secondPoolMapped = true;
+
     secondPoolActivationsCache.push_back(imagePoolBActivations);
 
     //second pool
@@ -841,21 +853,21 @@ void MainWindow::on_pushButton_2_clicked()
                 }
                 for (const auto& topNeuron: fpcCorrections)
                 {
-                    set<int> y = secondPoolMap[topNeuron.first];
-
-                    for (set<int>::iterator neuIT = y.begin();
-                         neuIT != y.end(); neuIT++)
+                    vector<int>::iterator y =
+                            secondPoolMap[topNeuron.first].begin();
+                    for (int j = 0; j < 4; j++)
                     {
-                        for (int j = 0; j < 4; j++)
-                        {
+                        if (*y > 0) {
+                            secondFilterFibreDeltas.at(i * 36 + *y) +=
+                                    topNeuron.second *
+                                    uncorrectedSecondPoolWeights.at(i * 4 + j);
                             uncorrectedSecondPoolWeights.at(i * 4 + j) -=
-                                    topNeuron.second * eta;
+                                    topNeuron. second * eta;
                         }
-                        uncorrectedSecondPoolBiases.at(i * 36 + *neuIT) -=
-                                topNeuron.second * eta;
-                        secondFilterFibreDeltas.at(i * 36 + *neuIT) +=
-                                topNeuron.second;
                     }
+
+                    uncorrectedSecondPoolBiases.at(i * 36 + topNeuron.first) -=
+                            topNeuron.second * eta;
                 }
 
             }
