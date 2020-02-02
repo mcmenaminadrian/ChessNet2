@@ -63,9 +63,9 @@ std::pair<double, double> FilterNet::filterSmallPool(
 }
 
 std::pair<double, double>
-    FilterNet::filterValue(const int i, const int x, const int y) const
+    FilterNet::filterValue(const int i, const int index) const
 {
-    return filtersTop.at(i).at(y * FILTERW + x).getActivation();
+    return filtersTop.at(i).at(index).getActivation();
 }
 
 std::pair<double, double>

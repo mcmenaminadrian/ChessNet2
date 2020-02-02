@@ -403,7 +403,7 @@ vector<pair<double, double>> MainWindow::feedForward(
     }
 
     //second layer
-    map<int, set<int>>::iterator tpmIT;
+    map<int, vector<int>>::iterator tpmIT;
     vector<vector<pair<double, double>>> imagePoolAActivations;
     for (int i = 0; i < FILTERS; i++)
     {
@@ -411,38 +411,52 @@ vector<pair<double, double>> MainWindow::feedForward(
         for (int row = 0; row < FILTERH; row++) {
             for (int col = 0; col < FILTERW; col++) {
                 double sum = 0.0;
+                int checking = -1;
                 int weightCount = 0;
                 for (int rowoffset = -FILTERG/2; rowoffset <= FILTERG/2;
                      rowoffset++) {
                     for (int coloffset = -FILTERG/2; coloffset <= FILTERG/2;
                          coloffset++) {
+                        if (!firstPoolMapped) {
+                            checking = (row + rowoffset) * FILTERW + col
+                                    + coloffset;
+                            tpmIT = firstPoolMap.find(row * FILTERW + col);
+                        }
                         if ((coloffset + col < 0) || (rowoffset + row < 0) ||
                                 (coloffset + col >= FILTERW) ||
                                 (rowoffset + row >= FILTERH)) {
                             weightCount++;
+                            if (!firstPoolMapped) {
+                                if (tpmIT == firstPoolMap.end()) {
+                                    firstPoolMap.insert(pair<int, vector<int>>
+                                                        (row * FILTERW + col,
+                                                         vector<int>(1, -1)));
+                                    continue;
+                                } else {
+                                    tpmIT->second.push_back(-1);
+                                    continue;
+                                }
+                            }
                             continue;
                         }
                         if (!firstPoolMapped)
                         {
-                            int checking = (row + rowoffset) * FILTERW +
-                                    col + coloffset;
-                            tpmIT = firstPoolMap.find(checking);
-
                             if (tpmIT == firstPoolMap.end())
                             {
-                                set<int> nodes;
-                                nodes.insert(row * FILTERW + col);
-                                firstPoolMap[checking] = nodes;
+                                firstPoolMap.insert(pair<int, vector<int>>(
+                                                        row * FILTERW + col,
+                                                        vector<int>(1, checking)));
                             }
                             else
                             {
-                                tpmIT->second.insert(row * FILTERW + col);
+                                tpmIT->second.push_back(checking);
                             }
                         }
 
                         pair<double, double> upperLayerActivation =
                                 filterNetwork.filterValue(
-                                    i, col + coloffset, row + rowoffset);
+                                    i, col + coloffset +
+                                    (row + rowoffset) * FILTERW);
                         sum += upperLayerActivation.first
                                 * getWeight(1, weightCount++);
                     }
@@ -454,8 +468,9 @@ vector<pair<double, double>> MainWindow::feedForward(
             }
         }
         imagePoolAActivations.push_back(localPoolAActivations);
+        firstPoolMapped = true;
     }
-    firstPoolMapped = true;
+
     firstPoolActivationsCache.push_back(imagePoolAActivations);
 
     //pool
@@ -634,7 +649,7 @@ void MainWindow::drawFilteredImage()
         for (int y = 0; y < FILTERH; y++) {
             for (int x = 0; x < FILTERW; x++) {
                 pair<double, double> activated =
-                    filterNetwork.filterValue(filter, x, y);
+                    filterNetwork.filterValue(filter, x + y * FILTERW);
                 int pixVal = static_cast<int>(activated.first);
                 int pixY = filter/10 * FILTERH + 10*(filter/10) + y;
                 int pixX = filter%10 * FILTERW + 10*(filter%10) + x;
@@ -806,6 +821,8 @@ void MainWindow::on_pushButton_2_clicked()
         vector<double> uncorrectedSecondPoolBiases = biases.at(2);
         vector<double> uncorrectedFirstPoolWeights = weights.at(1);
         vector<double> uncorrectedFirstPoolBiases = biases.at(1);
+        vector<double> uncorrectedEntryWeights = weights.at(0);
+        vector<double> uncorrectedEntryBiases = biases.at(0);
 
         for (const auto& image: records)
         {
@@ -901,26 +918,53 @@ void MainWindow::on_pushButton_2_clicked()
                 }
                 for (const auto& topNeuron: spCorrections)
                 {
-                    set<int> y = firstPoolMap[topNeuron.first];
 
-                    for (set<int>::iterator neuIT = y.begin();
-                         neuIT != y.end(); neuIT++)
+                    vector<int>::iterator y =
+                            firstPoolMap[topNeuron.first].begin();
+                    for (int j = 0; j < 25; j++)
                     {
-                        for (int j = 0; j < 25; j++)
-                        {
+                        if (*y > 0) {
+                            firstFilterFibreDeltas.at(i * 144 + *y) +=
+                                    topNeuron.second *
+                                    uncorrectedFirstPoolWeights.at(i * 25 + j);
                             uncorrectedFirstPoolWeights.at(i * 25 + j) -=
-                                    topNeuron.second * eta;
+                                    topNeuron. second * eta;
                         }
-                        uncorrectedFirstPoolBiases.at(i * 144 + *neuIT) -=
-                                topNeuron.second * eta;
-                        firstFilterFibreDeltas.at(i * 144 + *neuIT) +=
-                                topNeuron.second;
                     }
-                }
 
+                    uncorrectedFirstPoolBiases.at(i * 144 + topNeuron.first) -=
+                            topNeuron.second * eta;
+                }
             }
 
-
+            //input layer
+            for (int i = 0; i < 50; i++)
+            {
+                for (int j = 0; j < 144; j++)
+                {
+                    //get error at neuron
+                    double delta = firstFilterFibreDeltas.at(i * 144 + j);
+                    if (delta == 0)
+                    {
+                        continue;
+                    }
+                    double differentiate =
+                            filterNetwork.filterValue(i, j).second;
+                    if (differentiate == 0)
+                    {
+                        continue;
+                    }
+                    double rawCorrection = delta * differentiate;
+                    for (int k = 0; k < 25; k++)
+                    {
+                        uncorrectedEntryWeights.at(i * 25 + k) -=
+                                rawCorrection *
+                                uncorrectedEntryWeights.at(i * 25 + k) * eta;
+                    }
+                    uncorrectedEntryBiases.at(i * 144 + j) -=
+                            rawCorrection * eta;
+                }
+            }
 
             //reset to zero
             fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
@@ -934,7 +978,7 @@ void MainWindow::on_pushButton_2_clicked()
         for (uint j = 0; j < 9; j++)
         {
             double correction = avErrors.at(j) * eta;
-            finalBiases.at(j) -= correction;
+            finalBiases.at(j) -= correction * eta;
             for (uint k = 0; k < 50; k++)
             {
                 for (uint l = 0; l < 4; l++)
@@ -948,6 +992,8 @@ void MainWindow::on_pushButton_2_clicked()
             }
         }
 
+        weights.at(0) = uncorrectedEntryWeights;
+        biases.at(0) = uncorrectedEntryBiases;
         weights.at(1) = uncorrectedFirstPoolWeights;
         biases.at(1) = uncorrectedFirstPoolBiases;
         weights.at(2) = uncorrectedSecondPoolWeights;

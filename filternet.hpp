@@ -22,7 +22,7 @@ public:
     void buildSecondPool(const int filter, const int row, const int col,
                          const double& value, const int factor, const int redW);
     std::pair<double, double>
-        filterValue(const int i, const int x, const int y) const;
+        filterValue(const int i, const int index) const;
     std::pair<double, double>
         filterValueB(const int i, const int x, const int y) const;
     std::pair<double, double> poolValue(const int i, const int x,

@@ -89,7 +89,7 @@ private:
     bool secondPoolMapped;
     bool firstPoolMapped;
     std::map<int, std::vector<int>> secondPoolMap;
-    std::map<int, std::set<int>> firstPoolMap;
+    std::map<int, std::vector<int>> firstPoolMap;
     const double eta = 0.005;
 
 
