@@ -132,7 +132,19 @@ double FilterNet::consume(MainWindow* pMW, const int filter,
         sum += pMW->getWeight(0, offsetIntoWeights + x++) * iVal;
     }
     sum += pMW->getBias(0, filter * FILTERH * FILTERW + row * FILTERW + col);
-    (filtersTop.at(filter)).at(row * FILTERW + col).setActivation(sum);
+    std::pair<double, double> activationE = (filtersTop.at(filter)).
+            at(row * FILTERW + col).setActivation(sum);
+    entryDifferentials.push_back(activationE.second);
     return sum;
+}
+
+double FilterNet::getEntryDifferential(const int index) const
+{
+    return entryDifferentials.at(index);
+}
+
+void FilterNet::flush()
+{
+    entryDifferentials.clear();
 }
 

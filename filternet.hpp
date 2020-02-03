@@ -31,6 +31,8 @@ public:
                                           const int y, const int redw) const;
     std::pair<double, double>
         filterSmallPool(const int i, const int unit) const;
+    double getEntryDifferential(const int index) const;
+    void flush();
 
 private:
     const int count;
@@ -40,6 +42,7 @@ private:
 
     //two top level filters, then pooling (and filter)
     //then final pool
+    std::vector<double> entryDifferentials;
     std::vector<std::vector<FilterNeuron>> filtersTop;
     std::vector<std::vector<FilterNeuron>> filtersBottom;
     std::vector<std::vector<FilterNeuron>> poolTop;
