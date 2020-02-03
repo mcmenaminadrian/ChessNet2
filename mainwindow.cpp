@@ -697,7 +697,7 @@ QString MainWindow::dataName(const QString& lineIn) const
 void MainWindow::on_pushButton_clicked()
 {
 
-    QString csvFileName = QFileDialog::getOpenFileName(this,
+    csvFileName = QFileDialog::getOpenFileName(this,
         tr("Select File"), "", tr("CSVs (*.csv)"));
     //open file
     csvFile = new QFile(csvFileName);
@@ -773,6 +773,24 @@ void MainWindow::on_pushButton_2_clicked()
         qMB.exec();
 
         //Take delta for every input
+for (int repeat = 0; repeat < 100; repeat++)
+{
+    if (repeat > 0) {
+        for (auto& x:errors) {
+            x = 0;
+        }
+    csvFile->close();
+    delete csvFile;
+    csvFile = new QFile(csvFileName);
+    csvFile->open(QIODevice::ReadOnly | QIODevice::Text);
+    delete in;
+    in = new QTextStream(csvFile);
+    while (!in->atEnd()) {
+        QString inputLine = in->readLine();
+        processLine(inputLine);
+    }
+    }
+
 
         calculateDeltas();
         uint numOut = 0;
@@ -1002,5 +1020,7 @@ void MainWindow::on_pushButton_2_clicked()
         biases.at(3) = finalBiases;
         saveWeights();
     }
+    }
+
 
 }

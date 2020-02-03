@@ -75,6 +75,7 @@ private:
     std::vector<std::vector<double>> biases;
     QTextStream *in;
     std::vector<FCLNeuron> finalLayer;
+    QString csvFileName;
     QFile *csvFile;
     std::vector<double> errors;
     uint sampleCount;
