@@ -91,7 +91,7 @@ private:
     bool firstPoolMapped;
     std::map<int, std::vector<int>> secondPoolMap;
     std::map<int, std::vector<int>> firstPoolMap;
-    const double eta = 0.005;
+    const double eta = 0.0005;
 
 
     void processLine(const QString& lineIn);

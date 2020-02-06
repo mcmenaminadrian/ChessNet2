@@ -776,7 +776,7 @@ void MainWindow::on_pushButton_2_clicked()
 
 
         //Take delta for every input
-        for (int repeat = 0; repeat < 10; repeat++)
+        for (int repeat = 0; repeat < 100; repeat++)
         {
             sampleCount = 0;
             if (repeat > 0) {
@@ -808,6 +808,7 @@ void MainWindow::on_pushButton_2_clicked()
             //final layer
             vector<double> finalWeights = weights.at(3);
 
+
             vector<double> finalBiases = biases.at(3);
             //at this level we can just use average corrections
             vector<double> avErrors(0, 9);
@@ -831,7 +832,6 @@ void MainWindow::on_pushButton_2_clicked()
             vector<double> fibreDeltas(200, 0);
             vector<double> secondFilterFibreDeltas(1800, 0);
             vector<double> firstFilterFibreDeltas(7200, 0);
-            vector<double> inputFilterFibreDeltas(7200, 0);
             vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
                     poolFiltersCache.begin();
             vector<vector<vector<pair<double, double>>>>::iterator
@@ -851,19 +851,18 @@ void MainWindow::on_pushButton_2_clicked()
             int imageNumber = 0;
             for (const auto& image: records)
             {
-                for (uint i = 0; i < 200; i++)
+
+                for (int i = 0; i < 200; i++)
                 {
-                    for (uint j = 0; j < 9; j++)
+                    for (int j = 0; j < 9; j++)
                     {
                         double totalDelta = image.returnDelta().at(j);
                         if (totalDelta == 0)
                         {
                             continue;
                         }
-
                         fibreDeltas.at(i) += totalDelta *
-                                finalWeights.at(i + j * 4);
-
+                                finalWeights.at(i + j * 200);
                     }
                 }
 
@@ -997,6 +996,32 @@ void MainWindow::on_pushButton_2_clicked()
                     }
                 }
 
+
+                vector<double> totalFCLCorrections(9,0);
+                vector<double>::iterator fclIterator =
+                        totalFCLCorrections.begin();
+                for (const auto& x: deltas.at(imageNumber))
+                {
+                   *fclIterator++ += x;
+                }
+
+
+                for (uint j = 0; j < 9; j++)
+                {
+                    double correction = totalFCLCorrections.at(j) * eta;
+                    for (uint k = 0; k < 50; k++)
+                    {
+                        for (uint l = 0; l < 4; l++)
+                        {
+                            double uncorrectedWeight = weights.at(3).at(
+                                        j * 4 + k * 36 + l);
+                            finalWeights.at(j * 4 + k * 36 + l) -=
+                                    (uncorrectedWeight * correction);
+                        }
+
+                    }
+                }
+
                 //reset to zero
                 fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
                 fill(secondFilterFibreDeltas.begin(),
@@ -1016,22 +1041,10 @@ void MainWindow::on_pushButton_2_clicked()
             secondPoolMap.clear();
 
 
-
             for (uint j = 0; j < 9; j++)
             {
-                double correction = avErrors.at(j) * eta;
-                finalBiases.at(j) -= correction * eta;
-                for (uint k = 0; k < 50; k++)
-                {
-                    for (uint l = 0; l < 4; l++)
-                    {
-                        double uncorrectedWeight = finalWeights.at(
-                                    j * 4 + k * 36 + l);
-                        double newWeight = uncorrectedWeight - correction;
-                        finalWeights.at(j * 4 + k * 36 + l) = newWeight;
-                    }
-
-                }
+                   double correction = avErrors.at(j);
+                   finalBiases.at(j) -= correction * eta;
             }
 
             weights.at(0) = uncorrectedEntryWeights;
