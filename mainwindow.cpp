@@ -9,7 +9,7 @@
 #include <QPixmap>
 #include <QChar>
 #include <QThread>
-#include <vector>
+#include <QVector>
 #include <algorithm>
 #include <ctime>
 #include <cmath>
@@ -89,7 +89,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->lcdNumber_9->setStyleSheet(
                 """QLCDNumber{background-color: black; color: red;}""");
 
-    errors = vector<double>(9, 0);
+    errors = QVector<double>(9, 0);
     sampleCount = 0;
     secondPoolMapped = false;
     firstPoolMapped = false;
@@ -153,9 +153,9 @@ void MainWindow::updateJPEG(const QImage& jpegFile)
     ui->graphicsView->scene()->addPixmap(QPixmap::fromImage(jpegFile));
 }
 
-std::vector<double> MainWindow::processData(const QString& datFile)
+QVector<double> MainWindow::processData(const QString& datFile)
 {
-    vector<double> expectations;
+    QVector<double> expectations;
     QFile dataHorde(datFile.trimmed());
     if (!dataHorde.exists())
     {
@@ -188,7 +188,7 @@ void MainWindow::processLine(const QString& lineIn)
 {
     QString jpegName = graphicName(lineIn);
     QString datName = dataName(lineIn);
-    vector<double> answers = processData(datName);
+    QVector<double> answers = processData(datName);
     if (noRecords) {
         records.push_back(LearningRecord(jpegName, datName));
     }
@@ -209,14 +209,14 @@ void MainWindow::processLine(const QString& lineIn)
 
 
     //now map the image
-    vector<vector<int>> imageMap;
+    QVector<QVector<int>> imageMap;
     int y = 0;
     for (int l = 0; l < FILTERH; l++) {
         y += skipH;
         int x = 0;
         for (int k = 0; k < FILTERW; k++){
             x += skipW;
-            vector<int> imgGrid;
+            QVector<int> imgGrid;
             //use <= if FILTERG is odd
             for (int i = -FILTERG/2; i <= FILTERG/2; i++) {
                 for (int j = -FILTERG/2 ; j <= FILTERG/2; j++) {
@@ -232,18 +232,18 @@ void MainWindow::processLine(const QString& lineIn)
         }
     }
 
-    vector<pair<double, double>> results = feedForward(imageMap);
-    vector<double>::iterator itExpect = answers.begin();
+    QVector<pair<double, double>> results = feedForward(imageMap);
+    QVector<double>::iterator itExpect = answers.begin();
 
-    vector<pair<double, double>> errDiff;
-    vector<double>::iterator itErr = errors.begin();
+    QVector<pair<double, double>> errDiff;
+    QVector<double>::iterator itErr = errors.begin();
     for (const auto& x: results)
     {
         double errVal = x.first - *itExpect++;
         errDiff.push_back(pair<double, double>(errVal, x.second));
         *itErr++ += pow(errVal, 2);
     }
-    records.at(sampleCount++).addError(errDiff);
+    records[sampleCount++].addError(errDiff);
     ui->pushButton_2->setDisabled(false);
 
 }
@@ -283,13 +283,13 @@ void MainWindow::loadWeights()
     QFile weightsFile("weights.dat");
     weightsFile.open(QIODevice::ReadOnly);
     QDataStream inWeights(&weightsFile);
-    uint weightVectors;
-    inWeights >> weightVectors;
-    for (uint i = 0; i < weightVectors; i++)
+    uint weightQVectors;
+    inWeights >> weightQVectors;
+    for (uint i = 0; i < weightQVectors; i++)
     {
         uint weightsInLayer;
         inWeights >> weightsInLayer;
-        vector<double> readInWeights;
+        QVector<double> readInWeights;
         for (uint j = 0; j < weightsInLayer; j++)
         {
             double weightIn;
@@ -299,13 +299,13 @@ void MainWindow::loadWeights()
         weights.push_back(readInWeights);
 
     }
-    inWeights >> weightVectors;
+    inWeights >> weightQVectors;
     biases.clear();
-    for (uint i = 0; i < weightVectors; i++)
+    for (uint i = 0; i < weightQVectors; i++)
     {
         uint biasInLayer;
         inWeights >> biasInLayer;
-        vector<double> readInBias;
+        QVector<double> readInBias;
         for (uint j = 0; j < biasInLayer; j++)
         {
             double biasIn;
@@ -325,7 +325,7 @@ void MainWindow::generateWeights()
 {
     //image to top layer
 
-    vector<double> layerZeroWeights;
+    QVector<double> layerZeroWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
             double r = static_cast <double>(rand());
@@ -336,11 +336,11 @@ void MainWindow::generateWeights()
         }
     }
     weights.push_back(layerZeroWeights);
-    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW, -0.5));
+    biases.push_back(QVector<double>(FILTERS * FILTERH * FILTERW, -0.5));
 
 
     //top layer to second layer
-    vector<double> layerOneWeights;
+    QVector<double> layerOneWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
             double r = static_cast <double>(rand());
@@ -351,11 +351,11 @@ void MainWindow::generateWeights()
         }
     }
     weights.push_back(layerOneWeights);
-    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW, -0.5));
+    biases.push_back(QVector<double>(FILTERS * FILTERH * FILTERW, -0.5));
 
 
     //to second 'pool' layer
-    vector<double> poolLayerWeights;
+    QVector<double> poolLayerWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<2*2; g++) {
             double r = static_cast <double>(rand());
@@ -366,11 +366,11 @@ void MainWindow::generateWeights()
         }
     }
     weights.push_back(poolLayerWeights);
-    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW / 4, -0.5));
+    biases.push_back(QVector<double>(FILTERS * FILTERH * FILTERW / 4, -0.5));
 
 
     //to fully connected layer
-    vector<double> fclWeights;
+    QVector<double> fclWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g < 4 * CATS; g++) {
             double r = static_cast <double>(rand());
@@ -382,12 +382,12 @@ void MainWindow::generateWeights()
     }
 
     weights.push_back(fclWeights);
-    biases.push_back(vector<double>(CATS, -0.5));
+    biases.push_back(QVector<double>(CATS, -0.5));
 
 }
 
-vector<pair<double, double>> MainWindow::feedForward(
-        const vector<vector<int>>& imgMap)
+QVector<pair<double, double>> MainWindow::feedForward(
+        const QVector<QVector<int>>& imgMap)
 {
     fclSums.clear();
     ui->pushButton_2->setDisabled(true);
@@ -397,18 +397,18 @@ vector<pair<double, double>> MainWindow::feedForward(
         uint indexOrig = 0;
         for (int y = 0; y < FILTERH; y++) {
             for (int x = 0; x < FILTERW; x++) {
-                const vector<int>& origValue = imgMap.at(indexOrig++);
+                const QVector<int>& origValue = imgMap.at(indexOrig++);
                 filterNetwork.consume(this, i, y, x, origValue);
             }
         }
     }
 
     //second layer
-    map<int, vector<int>>::iterator tpmIT;
-    vector<vector<pair<double, double>>> imagePoolAActivations;
+    map<int, QVector<int>>::iterator tpmIT;
+    QVector<QVector<pair<double, double>>> imagePoolAActivations;
     for (int i = 0; i < FILTERS; i++)
     {
-        vector<pair<double, double>> localPoolAActivations;
+        QVector<pair<double, double>> localPoolAActivations;
         for (int row = 0; row < FILTERH; row++) {
             for (int col = 0; col < FILTERW; col++) {
                 double sum = 0.0;
@@ -429,9 +429,9 @@ vector<pair<double, double>> MainWindow::feedForward(
                             weightCount++;
                             if (!firstPoolMapped) {
                                 if (tpmIT == firstPoolMap.end()) {
-                                    firstPoolMap.insert(pair<int, vector<int>>
+                                    firstPoolMap.insert(pair<int, QVector<int>>
                                                         (row * FILTERW + col,
-                                                         vector<int>(1, -1)));
+                                                         QVector<int>(1, -1)));
                                     continue;
                                 } else {
                                     tpmIT->second.push_back(-1);
@@ -444,9 +444,9 @@ vector<pair<double, double>> MainWindow::feedForward(
                         {
                             if (tpmIT == firstPoolMap.end())
                             {
-                                firstPoolMap.insert(pair<int, vector<int>>(
+                                firstPoolMap.insert(pair<int, QVector<int>>(
                                                         row * FILTERW + col,
-                                                        vector<int>(1, checking)));
+                                                        QVector<int>(1, checking)));
                             }
                             else
                             {
@@ -476,12 +476,12 @@ vector<pair<double, double>> MainWindow::feedForward(
 
     //pool
     const int SPAN = 2;
-    vector<vector<FinalPoolCache>> thisImageFirstPoolCache;
+    QVector<QVector<FinalPoolCache>> thisImageFirstPoolCache;
     for (int filter = 0; filter < FILTERS; filter++) {
-        vector<FinalPoolCache> firstLocalPoolCache;
+        QVector<FinalPoolCache> firstLocalPoolCache;
         for (int row = 0; row <= FILTERH - SPAN; row += SPAN) {
             for (int col = 0; col <= FILTERW - SPAN; col+= SPAN) {
-                vector<double> cellValues;
+                QVector<double> cellValues;
                 for (int iRow = 0; iRow < SPAN; iRow++) {
                     for (int iCol = 0; iCol < SPAN; iCol++) {
                         cellValues.push_back(filterNetwork.filterValueB(
@@ -503,15 +503,15 @@ vector<pair<double, double>> MainWindow::feedForward(
     topPoolFiltersCache.push_back(thisImageFirstPoolCache);
 
     //convolve pool
-    map<int, vector<int>>::iterator lpmIT;
-    vector<double> poolSums;
-    vector<vector<pair<double, double>>> imagePoolBActivations;
+    map<int, QVector<int>>::iterator lpmIT;
+    QVector<double> poolSums;
+    QVector<QVector<pair<double, double>>> imagePoolBActivations;
     int checking = -1;
     for (int filter = 0; filter < FILTERS; filter++) {
-        vector<pair<double, double>> localPoolBActivations;
+        QVector<pair<double, double>> localPoolBActivations;
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
-                vector<double> cellValues;
+                QVector<double> cellValues;
                 for (int iRow = 0; iRow < SPAN; iRow++) {
                     for (int iCol = 0; iCol < SPAN; iCol++) {                       
                         if (!secondPoolMapped) {
@@ -525,9 +525,9 @@ vector<pair<double, double>> MainWindow::feedForward(
                             if (!secondPoolMapped) {
                                 if (lpmIT == secondPoolMap.end()) {
                                     secondPoolMap.insert(
-                                                pair<int, vector<int>>
+                                                pair<int, QVector<int>>
                                                 (row * FILTERW/SPAN + col,
-                                                 vector<int>(1, -1)));
+                                                 QVector<int>(1, -1)));
                                     continue;
                                 }
                                 lpmIT->second.push_back(-1);
@@ -539,9 +539,9 @@ vector<pair<double, double>> MainWindow::feedForward(
                         {
                             if (lpmIT == secondPoolMap.end())
                             {
-                                secondPoolMap.insert(pair<int, vector<int>>
+                                secondPoolMap.insert(pair<int, QVector<int>>
                                                      (row * FILTERW/SPAN + col,
-                                                      vector<int>(1, checking)));
+                                                      QVector<int>(1, checking)));
                             } else {
                                 lpmIT->second.push_back(checking);
                             }
@@ -573,12 +573,12 @@ vector<pair<double, double>> MainWindow::feedForward(
     const int SECOND_SPAN = 3;
     const int REDH = FILTERH/SPAN;
     const int REDW = FILTERW/SPAN;
-    vector<vector<FinalPoolCache>> thisImageFinalPoolCache;
+    QVector<QVector<FinalPoolCache>> thisImageFinalPoolCache;
     for (int filter = 0; filter < FILTERS; filter++) {
-        vector<FinalPoolCache> localCache;
+        QVector<FinalPoolCache> localCache;
         for (int row = 0; row <= REDH - SECOND_SPAN; row += SECOND_SPAN) {
             for (int col = 0; col <= REDW - SECOND_SPAN; col+= SECOND_SPAN) {
-                vector<double> cellValues;
+                QVector<double> cellValues;
                 for (int iRow = 0; iRow < SECOND_SPAN; iRow++) {
                     for (int iCol = 0; iCol < SECOND_SPAN; iCol++) {
                         cellValues.push_back(filterNetwork.filterPoolB(
@@ -614,11 +614,11 @@ vector<pair<double, double>> MainWindow::feedForward(
         }
         sum += getBias(3, fcl);
         fclSums.push_back(sum);
-        finalLayer.at(fcl).setActivation(sum);
+        finalLayer[fcl].setActivation(sum);
     }
 
 
-    vector<pair<double, double>> results;
+    QVector<pair<double, double>> results;
     for (int x = 0; x < 9; x++)
     {
         results.push_back(finalLayer.at(x).getActivation());
@@ -733,13 +733,13 @@ double MainWindow::getBias(const int &indexA, const int &indexB) const
 void MainWindow::setWeight(const int &indexA, const int &indexB,
                            const double &weight)
 {
-    weights.at(indexA).at(indexB) = weight;
+    weights[indexA][indexB] = weight;
 }
 
 void MainWindow::setBias(const int &indexA, const int &indexB,
                          const double &bias)
 {
-    biases.at(indexA).at(indexB) = bias;
+    biases[indexA][indexB] = bias;
 }
 
 void MainWindow::calculateDeltas()
@@ -806,12 +806,12 @@ void MainWindow::on_pushButton_2_clicked()
             }
             cout << "Total Error is " << totalError << endl;
             //final layer
-            vector<double> finalWeights = weights.at(3);
+            QVector<double> finalWeights = weights.at(3);
 
 
-            vector<double> finalBiases = biases.at(3);
+            QVector<double> finalBiases = biases.at(3);
             //at this level we can just use average corrections
-            vector<double> avErrors(0, 9);
+            QVector<double> avErrors(0, 9);
             for (uint i = 0; i < 9; i++)
             {
                 double totalDelta = 0;
@@ -829,25 +829,25 @@ void MainWindow::on_pushButton_2_clicked()
 
             //now have to go with every image
             //calculate the per neuron contribution
-            vector<double> fibreDeltas(200, 0);
-            vector<double> secondFilterFibreDeltas(1800, 0);
-            vector<double> firstFilterFibreDeltas(7200, 0);
-            vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
+            QVector<double> fibreDeltas(200, 0);
+            QVector<double> secondFilterFibreDeltas(1800, 0);
+            QVector<double> firstFilterFibreDeltas(7200, 0);
+            QVector<QVector<QVector<FinalPoolCache>>>::iterator fpcIterator =
                     poolFiltersCache.begin();
-            vector<vector<vector<pair<double, double>>>>::iterator
+            QVector<QVector<QVector<pair<double, double>>>>::iterator
                     poolBIterator =
                     secondPoolActivationsCache.begin();
-            vector<vector<vector<FinalPoolCache>>>::iterator tpIterator =
+            QVector<QVector<QVector<FinalPoolCache>>>::iterator tpIterator =
                     topPoolFiltersCache.begin();
-            vector<vector<vector<pair<double, double>>>>::iterator
+            QVector<QVector<QVector<pair<double, double>>>>::iterator
                     poolAIterator =
                     firstPoolActivationsCache.begin();
-            vector<double> uncorrectedSecondPoolWeights = weights.at(2);
-            vector<double> uncorrectedSecondPoolBiases = biases.at(2);
-            vector<double> uncorrectedFirstPoolWeights = weights.at(1);
-            vector<double> uncorrectedFirstPoolBiases = biases.at(1);
-            vector<double> uncorrectedEntryWeights = weights.at(0);
-            vector<double> uncorrectedEntryBiases = biases.at(0);
+            QVector<double> uncorrectedSecondPoolWeights = weights.at(2);
+            QVector<double> uncorrectedSecondPoolBiases = biases.at(2);
+            QVector<double> uncorrectedFirstPoolWeights = weights.at(1);
+            QVector<double> uncorrectedFirstPoolBiases = biases.at(1);
+            QVector<double> uncorrectedEntryWeights = weights.at(0);
+            QVector<double> uncorrectedEntryBiases = biases.at(0);
             int imageNumber = 0;
             for (const auto& image: records)
             {
@@ -861,7 +861,7 @@ void MainWindow::on_pushButton_2_clicked()
                         {
                             continue;
                         }
-                        fibreDeltas.at(i) += totalDelta *
+                        fibreDeltas[i] += totalDelta *
                                 finalWeights.at(i + j * 200);
                     }
                 }
@@ -869,14 +869,14 @@ void MainWindow::on_pushButton_2_clicked()
 
                 //back propagate the error
                 //one neuron at a time
-                vector<vector<FinalPoolCache>> imageFPCache = *fpcIterator++;
-                vector<vector<pair<double, double>>> imagePoolBCache =
+                QVector<QVector<FinalPoolCache>> imageFPCache = *fpcIterator++;
+                QVector<QVector<pair<double, double>>> imagePoolBCache =
                         *poolBIterator++;
                 for (int i = 0; i < 50; i++)
                 {
                     map<int, double> fpcCorrections;
-                    vector<FinalPoolCache> localCache = imageFPCache.at(i);
-                    vector<pair<double, double>> localActivations =
+                    QVector<FinalPoolCache> localCache = imageFPCache.at(i);
+                    QVector<pair<double, double>> localActivations =
                             imagePoolBCache.at(i);
                     map<int, double>::iterator corrIT;
                     int cacheCount = 0;
@@ -894,20 +894,21 @@ void MainWindow::on_pushButton_2_clicked()
                     }
                     for (const auto& topNeuron: fpcCorrections)
                     {
-                        vector<int>::iterator y =
+                        QVector<int>::iterator y =
                                 secondPoolMap[topNeuron.first].begin();
                         for (int j = 0; j < 4; j++)
                         {
                             if (*y > 0) {
-                                secondFilterFibreDeltas.at(i * 36 + *y) +=
+                                secondFilterFibreDeltas[i * 36 + *y] +=
                                         topNeuron.second *
                                         uncorrectedSecondPoolWeights.at(i * 4 + j);
-                                uncorrectedSecondPoolWeights.at(i * 4 + j) -=
+                                uncorrectedSecondPoolWeights[i * 4 + j] -=
                                         topNeuron. second * eta;
                             }
+                            y++;
                         }
 
-                        uncorrectedSecondPoolBiases.at(i * 36 + topNeuron.first) -=
+                        uncorrectedSecondPoolBiases[i * 36 + topNeuron.first] -=
                                 topNeuron.second * eta;
                     }
 
@@ -917,14 +918,14 @@ void MainWindow::on_pushButton_2_clicked()
                 //bigger filter
 
 
-                vector<vector<FinalPoolCache>> imageTPCache = *tpIterator++;
-                vector<vector<pair<double, double>>> imagePoolACache =
+                QVector<QVector<FinalPoolCache>> imageTPCache = *tpIterator++;
+                QVector<QVector<pair<double, double>>> imagePoolACache =
                         *poolAIterator++;
                 for (int i = 0; i < 50; i++)
                 {
                     map<int, double> spCorrections;
-                    vector<FinalPoolCache> localTPCache = imageTPCache.at(i);
-                    vector<pair<double, double>> localPActivations =
+                    QVector<FinalPoolCache> localTPCache = imageTPCache.at(i);
+                    QVector<pair<double, double>> localPActivations =
                             imagePoolACache.at(i);
                     map<int, double>::iterator corrAIT;
                     int cacheCount = 0;
@@ -944,21 +945,23 @@ void MainWindow::on_pushButton_2_clicked()
                     for (const auto& topNeuron: spCorrections)
                     {
 
-                        vector<int>::iterator y =
+                        QVector<int>::iterator y =
                                 firstPoolMap[topNeuron.first].begin();
                         for (int j = 0; j < 25; j++)
                         {
                             if (*y > 0) {
-                                firstFilterFibreDeltas.at(i * 144 + *y) +=
+                                firstFilterFibreDeltas[i * 144 + *y] +=
                                         topNeuron.second *
                                         uncorrectedFirstPoolWeights.
                                         at(i * 25 + j);
-                                uncorrectedFirstPoolWeights.at(i * 25 + j) -=
+                                uncorrectedFirstPoolWeights[i * 25 + j] -=
                                         topNeuron. second * eta;
+
                             }
+                            y++;
                         }
 
-                        uncorrectedFirstPoolBiases.at(i * 144 + topNeuron.first) -=
+                        uncorrectedFirstPoolBiases[i * 144 + topNeuron.first] -=
                                 topNeuron.second * eta;
                     }
                 }
@@ -988,17 +991,17 @@ void MainWindow::on_pushButton_2_clicked()
                         double rawCorrection = deltaE * differentiate;
                         for (int k = 0; k < 25; k++)
                         {
-                            uncorrectedEntryWeights.at(i * 25 + k) -=
+                            uncorrectedEntryWeights[i * 25 + k] -=
                                     rawCorrection * eta;
                         }
-                        uncorrectedEntryBiases.at(i * 144 + j) -=
+                        uncorrectedEntryBiases[i * 144 + j] -=
                                 rawCorrection * eta;
                     }
                 }
 
 
-                vector<double> totalFCLCorrections(9,0);
-                vector<double>::iterator fclIterator =
+                QVector<double> totalFCLCorrections(9,0);
+                QVector<double>::iterator fclIterator =
                         totalFCLCorrections.begin();
                 for (const auto& x: deltas.at(imageNumber))
                 {
@@ -1015,7 +1018,7 @@ void MainWindow::on_pushButton_2_clicked()
                         {
                             double uncorrectedWeight = weights.at(3).at(
                                         j * 4 + k * 36 + l);
-                            finalWeights.at(j * 4 + k * 36 + l) -=
+                            finalWeights[j * 4 + k * 36 + l] -=
                                     (uncorrectedWeight * correction);
                         }
 
@@ -1044,17 +1047,17 @@ void MainWindow::on_pushButton_2_clicked()
             for (uint j = 0; j < 9; j++)
             {
                    double correction = avErrors.at(j);
-                   finalBiases.at(j) -= correction * eta;
+                   finalBiases[j] -= correction * eta;
             }
 
-            weights.at(0) = uncorrectedEntryWeights;
-            biases.at(0) = uncorrectedEntryBiases;
-            weights.at(1) = uncorrectedFirstPoolWeights;
-            biases.at(1) = uncorrectedFirstPoolBiases;
-            weights.at(2) = uncorrectedSecondPoolWeights;
-            weights.at(3) = finalWeights;
-            biases.at(2) = uncorrectedSecondPoolBiases;
-            biases.at(3) = finalBiases;
+            weights[0] = uncorrectedEntryWeights;
+            biases[0] = uncorrectedEntryBiases;
+            weights[1] = uncorrectedFirstPoolWeights;
+            biases[1] = uncorrectedFirstPoolBiases;
+            weights[2] = uncorrectedSecondPoolWeights;
+            weights[3] = finalWeights;
+            biases[2] = uncorrectedSecondPoolBiases;
+            biases[3] = finalBiases;
             saveWeights();
         }
     }

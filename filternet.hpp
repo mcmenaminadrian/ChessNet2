@@ -1,7 +1,7 @@
 #ifndef FILTERNET_H
 #define FILTERNET_H
 
-#include <vector>
+#include <QVector>
 #include "filterneuron.hpp"
 
 class MainWindow;
@@ -11,7 +11,7 @@ class FilterNet
 public:
     FilterNet(const int c, const int h, const int w, const int g);
     double consume(MainWindow* pMW, const int filter, const int row,
-                 const int col, const std::vector<int>& values);
+                 const int col, const QVector<int>& values);
     std::pair<double, double> secondConsume(const int filter,
                        const int row, const int col,
                        const double& sum);
@@ -42,12 +42,12 @@ private:
 
     //two top level filters, then pooling (and filter)
     //then final pool
-    std::vector<double> entryDifferentials;
-    std::vector<std::vector<FilterNeuron>> filtersTop;
-    std::vector<std::vector<FilterNeuron>> filtersBottom;
-    std::vector<std::vector<FilterNeuron>> poolTop;
-    std::vector<std::vector<FilterNeuron>> poolBottom;
-    std::vector<std::vector<FilterNeuron>> lastPool;
+    QVector<double> entryDifferentials;
+    QVector<QVector<FilterNeuron>> filtersTop;
+    QVector<QVector<FilterNeuron>> filtersBottom;
+    QVector<QVector<FilterNeuron>> poolTop;
+    QVector<QVector<FilterNeuron>> poolBottom;
+    QVector<QVector<FilterNeuron>> lastPool;
 };
 
 #endif // FILTERNET_H

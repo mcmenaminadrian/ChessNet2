@@ -13,13 +13,13 @@ FilterNet::FilterNet(const int c, const int h, const int w,
     int falseFilter = -1;
 
     //top filters
-    std::vector<FilterNeuron> aFilter;
+    QVector<FilterNeuron> aFilter;
     for (auto y = 0; y < height; y++) {
         for (auto x = 0; x < width; x++) {
             aFilter.push_back(FilterNeuron(realFilter++, x));
         }
     }
-    std::vector<FilterNeuron> aaFilter;
+    QVector<FilterNeuron> aaFilter;
     for (auto y = 0; y < height; y++) {
         for (auto x = 0; x < width; x++) {
             aaFilter.push_back(FilterNeuron(realFilter++, x));
@@ -27,13 +27,13 @@ FilterNet::FilterNet(const int c, const int h, const int w,
     }
 
     //pool filters
-    std::vector<FilterNeuron> bFilter;
+    QVector<FilterNeuron> bFilter;
     for (auto y = 0; y < height/2; y++) {
         for (auto x = 0; x < width/2; x++) {
             bFilter.push_back(FilterNeuron(falseFilter--, y));
         }
     }
-    std::vector<FilterNeuron> bbFilter;
+    QVector<FilterNeuron> bbFilter;
     for (auto y = 0; y < height/2; y++) {
         for (auto x = 0; x < width/2; x++) {
             bbFilter.push_back(FilterNeuron(realFilter++, y));
@@ -41,7 +41,7 @@ FilterNet::FilterNet(const int c, const int h, const int w,
     }
 
     //final pool
-    std::vector<FilterNeuron> cFilter;
+    QVector<FilterNeuron> cFilter;
     for (auto x = 0; x < 4; x++) {
         cFilter.push_back(FilterNeuron(falseFilter--, x));
     }
@@ -89,15 +89,15 @@ std::pair<double, double> FilterNet::poolValue(const int i, const int x,
 void FilterNet::buildPool(const int filter, const int row, const int col,
                           const double &value, const int factor)
 {
-    poolTop.at(filter).
-            at((row * FILTERW/factor) / factor + col / factor).setPool(value);
+    poolTop[filter]
+            [(row * FILTERW/factor) / factor + col / factor].setPool(value);
 }
 
 std::pair<double, double> FilterNet::buildPoolConv(const int filter,
                   const int row, const int col, const double &value,
                                                    const int factor)
 {
-    return poolBottom.at(filter).at(row * FILTERW/factor + col).
+    return poolBottom[filter][row * FILTERW/factor + col].
             setActivation(value);
 }
 
@@ -105,21 +105,21 @@ void FilterNet::buildSecondPool(const int filter, const int row,
                                 const int col, const double &value,
                                 const int factor, const int REDW)
 {
-    lastPool.at(filter).at((row * REDW/factor)/factor +
-                           col/factor).setPool(value);
+    lastPool[filter][(row * REDW/factor)/factor +
+                           col/factor].setPool(value);
 }
 
 std::pair<double, double> FilterNet::secondConsume(
         const int filter, const int row, const int col,
                               const double &sum)
 {
-    return filtersBottom.at(filter).at(row * FILTERW + col).setActivation(sum);
+    return filtersBottom[filter][row * FILTERW + col].setActivation(sum);
 
 }
 
 
 double FilterNet::consume(MainWindow* pMW, const int filter,
-        const int row, const int col, const std::vector<int>& value)
+        const int row, const int col, const QVector<int>& value)
 {
 
     //set up initial hidden layer
@@ -132,8 +132,8 @@ double FilterNet::consume(MainWindow* pMW, const int filter,
         sum += pMW->getWeight(0, offsetIntoWeights + x++) * iVal;
     }
     sum += pMW->getBias(0, filter * FILTERH * FILTERW + row * FILTERW + col);
-    std::pair<double, double> activationE = (filtersTop.at(filter)).
-            at(row * FILTERW + col).setActivation(sum);
+    std::pair<double, double> activationE = filtersTop[filter]
+            [row * FILTERW + col].setActivation(sum);
     entryDifferentials.push_back(activationE.second);
     return sum;
 }

@@ -5,7 +5,7 @@
 #include <QGraphicsScene>
 #include <QTextStream>
 #include <QFile>
-#include <vector>
+#include <QVector>
 #include <utility>
 #include <map>
 #include <set>
@@ -71,41 +71,41 @@ private:
     Ui::MainWindow *ui;
     QGraphicsScene *qGS, *qFS;
     FilterNet filterNetwork;
-    std::vector<std::vector<double>> weights;
-    std::vector<std::vector<double>> biases;
+    QVector<QVector<double>> weights;
+    QVector<QVector<double>> biases;
     QTextStream *in;
-    std::vector<FCLNeuron> finalLayer;
+    QVector<FCLNeuron> finalLayer;
     QString csvFileName;
     QFile *csvFile;
-    std::vector<double> errors;
+    QVector<double> errors;
     uint sampleCount;
-    std::vector<double> fclSums;
-    std::vector<std::vector<double>> deltas;
-    std::vector<std::vector<std::vector<FinalPoolCache>>> poolFiltersCache;
-    std::vector<std::vector<std::vector<FinalPoolCache>>> topPoolFiltersCache;
-    std::vector<std::vector<std::vector<std::pair<double, double>>>>
+    QVector<double> fclSums;
+    QVector<QVector<double>> deltas;
+    QVector<QVector<QVector<FinalPoolCache>>> poolFiltersCache;
+    QVector<QVector<QVector<FinalPoolCache>>> topPoolFiltersCache;
+    QVector<QVector<QVector<std::pair<double, double>>>>
         secondPoolActivationsCache;
-    std::vector<std::vector<std::vector<std::pair<double, double>>>>
+    QVector<QVector<QVector<std::pair<double, double>>>>
         firstPoolActivationsCache;
     bool secondPoolMapped;
     bool firstPoolMapped;
-    std::map<int, std::vector<int>> secondPoolMap;
-    std::map<int, std::vector<int>> firstPoolMap;
+    std::map<int, QVector<int>> secondPoolMap;
+    std::map<int, QVector<int>> firstPoolMap;
     const double eta = 0.0005;
 
 
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
     QString dataName(const QString& lineIn) const;
-    std::vector<std::pair<double, double>>
-        feedForward(const std::vector<std::vector<int>>& imgMap);
+    QVector<std::pair<double, double>>
+        feedForward(const QVector<QVector<int>>& imgMap);
     void generateWeights();
     void saveWeights();
     void loadWeights();
     void drawFilteredImage();
-    std::vector<double> processData(const QString& datName);
+    QVector<double> processData(const QString& datName);
     void calculateDeltas();
-    std::vector<LearningRecord> records;
+    QVector<LearningRecord> records;
     bool noRecords;
 };
 #endif // MAINWINDOW_H
