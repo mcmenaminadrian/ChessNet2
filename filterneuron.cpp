@@ -1,6 +1,7 @@
 #include <vector>
 #include "filterneuron.hpp"
 #include "activation.hpp"
+#include <cstring>
 
 
 
@@ -35,3 +36,18 @@ std::pair<int, int> FilterNeuron::getDetails() const
     return std::pair<int, int>(layer, index);
 }
 
+FilterNeuron& FilterNeuron::operator=(const FilterNeuron &fN)
+{
+    if (this != &fN) {
+        memcpy((void*)&layer, &fN.layer, sizeof (int));
+        memcpy((void*)&index, &fN.index, sizeof(int));
+        setActivation(fN.inputSum);
+    }
+    return *this;
+}
+
+FilterNeuron::FilterNeuron(const FilterNeuron& fN):
+    layer(fN.layer), index(fN.index)
+{
+    setActivation(fN.inputSum);
+}

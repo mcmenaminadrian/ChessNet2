@@ -13,6 +13,8 @@ private:
 
 public:
     FilterNeuron(const int l, const int i);
+    FilterNeuron(const FilterNeuron& fN);
+    FilterNeuron& operator=(const FilterNeuron& fN);
     std::pair<double, double> setActivation(const double& sum);
     std::pair<double, double> getActivation() const;
     void setPool(const double& value);
