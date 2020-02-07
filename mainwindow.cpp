@@ -864,6 +864,9 @@ void MainWindow::on_pushButton_2_clicked()
                         fibreDeltas.at(i) += totalDelta *
                                 finalWeights.at(i + j * 200);
                     }
+                    if (abs(fibreDeltas.at(i)) < 0.00001) {
+                        fibreDeltas.at(i) = 0;
+                    }
                 }
 
 
