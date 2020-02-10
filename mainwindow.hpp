@@ -38,10 +38,10 @@ public:
     void setBias(const int& indexA, const int& indexB, const double& bias);
 
 public slots:
-    void updateJPEG(const QImage& jpegName);
+    void updateJPEG(const QImage jpegName);
 
 signals:
-    void showJPEG(const QImage& fileName);
+    void showJPEG(const QImage fileName);
     void showLCD0(const double& num);
     void showLCD1(const double& num);
     void showLCD2(const double& num);
@@ -69,6 +69,8 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    QPixmap *myPixMap;
+    QPixmap *filteredPixMap;
     QGraphicsScene *qGS, *qFS;
     FilterNet filterNetwork;
     std::vector<std::vector<double>> weights;
@@ -91,19 +93,29 @@ private:
     bool firstPoolMapped;
     std::map<int, std::vector<int>> secondPoolMap;
     std::map<int, std::vector<int>> firstPoolMap;
-    const double eta = 0.0005;
+    std::vector<double> fibreDeltas;
+    std::vector<double> secondFilterFibreDeltas;
+    std::vector<double> firstFilterFibreDeltas;
+    std::vector<double> uncorrectedSecondPoolBiases;
+    std::vector<double> uncorrectedFirstPoolWeights;
+    std::vector<double> uncorrectedFirstPoolBiases;
+    std::vector<double> uncorrectedEntryWeights;
+    std::vector<double> uncorrectedEntryBiases;
+    std::vector<std::pair<double, double>> results;
+    std::vector<double> answers;
+
+    const double eta = 0.00075;
 
 
     void processLine(const QString& lineIn);
     QString graphicName(const QString& lineIn) const;
-    QString dataName(const QString& lineIn) const;
-    std::vector<std::pair<double, double>>
-        feedForward(const std::vector<std::vector<int>>& imgMap);
+    QString dataName(const QString& lineIn) const;   
+    void feedForward(const std::vector<std::vector<int>>& imgMap);
     void generateWeights();
     void saveWeights();
     void loadWeights();
     void drawFilteredImage();
-    std::vector<double> processData(const QString& datName);
+    void processData(const QString& datName);
     void calculateDeltas();
     std::vector<LearningRecord> records;
     bool noRecords;

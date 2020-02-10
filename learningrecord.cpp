@@ -17,6 +17,7 @@ void LearningRecord::addError(const std::vector<
 std::vector<double> LearningRecord::returnDelta() const
 {
     std::vector<double> reply;
+    reply.reserve(9);
     for (const auto& x: errRecord)
     {
         reply.push_back(x.first * x.second);

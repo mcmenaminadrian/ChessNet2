@@ -58,6 +58,18 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->setScene(qGS);
     ui->graphicsView_2->setScene(qFS);
     ui->pushButton_2->setDisabled(true);
+    fibreDeltas = vector<double>(200, 0);
+    secondFilterFibreDeltas = vector<double>(1800, 0);
+    firstFilterFibreDeltas = vector<double>(7200, 0);
+    uncorrectedSecondPoolBiases = vector<double>(1800, 0);
+    uncorrectedFirstPoolWeights = vector<double>(1250, 0);
+    uncorrectedFirstPoolBiases = vector<double>(7200, 0);
+    uncorrectedEntryWeights = vector<double>(1250, 0);
+    uncorrectedEntryBiases = vector<double>(7200, 0);
+    results = vector<pair<double, double>>(9, pair<double, double>(0, 0));
+    answers = vector<double>(9, 0);
+    myPixMap = nullptr;
+    filteredPixMap = nullptr;
 
     /*****GENERATE WEIGHTS*****/
     srand (time(NULL));
@@ -148,14 +160,20 @@ void MainWindow::updateLCD8(const double& number)
     ui->lcdNumber_9->display(number);
 }
 
-void MainWindow::updateJPEG(const QImage& jpegFile)
+void MainWindow::updateJPEG(const QImage jpegFile)
 {
-    ui->graphicsView->scene()->addPixmap(QPixmap::fromImage(jpegFile));
+    if (myPixMap)
+    {
+        delete myPixMap;
+        myPixMap = nullptr;
+    }
+    myPixMap = new QPixmap(QPixmap::fromImage(jpegFile));
+    ui->graphicsView->scene()->addPixmap(*myPixMap);
 }
 
-std::vector<double> MainWindow::processData(const QString& datFile)
+void MainWindow::processData(const QString& datFile)
 {
-    vector<double> expectations;
+
     QFile dataHorde(datFile.trimmed());
     if (!dataHorde.exists())
     {
@@ -170,17 +188,19 @@ std::vector<double> MainWindow::processData(const QString& datFile)
     }
 
     QDataStream dataStreamIn(&dataHorde);
+
     char* entry;
 
     dataStreamIn >> entry;
     QString str(entry);
+    int insertPoint = 8;
     for (int i = 0; i < str.length(); i++) {
         int x = static_cast<double>(str.at(i).digitValue());
-        expectations.insert(expectations.begin(), x);
+        answers.at(insertPoint--) = x;
     }
-    delete entry;
+    str.clear();
+    delete[] entry;
     dataHorde.close();
-    return expectations;
 }
 
 
@@ -188,7 +208,7 @@ void MainWindow::processLine(const QString& lineIn)
 {
     QString jpegName = graphicName(lineIn);
     QString datName = dataName(lineIn);
-    vector<double> answers = processData(datName);
+    processData(datName);
     if (noRecords) {
         records.push_back(LearningRecord(jpegName, datName));
     }
@@ -210,6 +230,7 @@ void MainWindow::processLine(const QString& lineIn)
 
     //now map the image
     vector<vector<int>> imageMap;
+    imageMap.reserve(144);
     int y = 0;
     for (int l = 0; l < FILTERH; l++) {
         y += skipH;
@@ -217,6 +238,7 @@ void MainWindow::processLine(const QString& lineIn)
         for (int k = 0; k < FILTERW; k++){
             x += skipW;
             vector<int> imgGrid;
+            imgGrid.reserve(25);
             //use <= if FILTERG is odd
             for (int i = -FILTERG/2; i <= FILTERG/2; i++) {
                 for (int j = -FILTERG/2 ; j <= FILTERG/2; j++) {
@@ -232,10 +254,11 @@ void MainWindow::processLine(const QString& lineIn)
         }
     }
 
-    vector<pair<double, double>> results = feedForward(imageMap);
+    feedForward(imageMap);
     vector<double>::iterator itExpect = answers.begin();
 
     vector<pair<double, double>> errDiff;
+    errDiff.reserve(errors.size());
     vector<double>::iterator itErr = errors.begin();
     for (const auto& x: results)
     {
@@ -386,10 +409,11 @@ void MainWindow::generateWeights()
 
 }
 
-vector<pair<double, double>> MainWindow::feedForward(
-        const vector<vector<int>>& imgMap)
+void MainWindow::feedForward(const vector<vector<int>>& imgMap)
 {
+
     fclSums.clear();
+    fclSums.reserve(9);
     ui->pushButton_2->setDisabled(true);
     //top layer
     for (int i = 0; i < FILTERS; i++)
@@ -406,9 +430,11 @@ vector<pair<double, double>> MainWindow::feedForward(
     //second layer
     map<int, vector<int>>::iterator tpmIT;
     vector<vector<pair<double, double>>> imagePoolAActivations;
+    imagePoolAActivations.reserve(50);
     for (int i = 0; i < FILTERS; i++)
     {
         vector<pair<double, double>> localPoolAActivations;
+        localPoolAActivations.reserve(144);
         for (int row = 0; row < FILTERH; row++) {
             for (int col = 0; col < FILTERW; col++) {
                 double sum = 0.0;
@@ -477,8 +503,10 @@ vector<pair<double, double>> MainWindow::feedForward(
     //pool
     const int SPAN = 2;
     vector<vector<FinalPoolCache>> thisImageFirstPoolCache;
+    thisImageFirstPoolCache.reserve(50);
     for (int filter = 0; filter < FILTERS; filter++) {
         vector<FinalPoolCache> firstLocalPoolCache;
+        firstLocalPoolCache.reserve(36);
         for (int row = 0; row <= FILTERH - SPAN; row += SPAN) {
             for (int col = 0; col <= FILTERW - SPAN; col+= SPAN) {
                 vector<double> cellValues;
@@ -506,9 +534,11 @@ vector<pair<double, double>> MainWindow::feedForward(
     map<int, vector<int>>::iterator lpmIT;
     vector<double> poolSums;
     vector<vector<pair<double, double>>> imagePoolBActivations;
+    imagePoolBActivations.reserve(50);
     int checking = -1;
     for (int filter = 0; filter < FILTERS; filter++) {
         vector<pair<double, double>> localPoolBActivations;
+        localPoolBActivations.reserve(36);
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
                 vector<double> cellValues;
@@ -574,8 +604,10 @@ vector<pair<double, double>> MainWindow::feedForward(
     const int REDH = FILTERH/SPAN;
     const int REDW = FILTERW/SPAN;
     vector<vector<FinalPoolCache>> thisImageFinalPoolCache;
+    thisImageFinalPoolCache.reserve(50);
     for (int filter = 0; filter < FILTERS; filter++) {
         vector<FinalPoolCache> localCache;
+        localCache.reserve(4);
         for (int row = 0; row <= REDH - SECOND_SPAN; row += SECOND_SPAN) {
             for (int col = 0; col <= REDW - SECOND_SPAN; col+= SECOND_SPAN) {
                 vector<double> cellValues;
@@ -617,11 +649,9 @@ vector<pair<double, double>> MainWindow::feedForward(
         finalLayer.at(fcl).setActivation(sum);
     }
 
-
-    vector<pair<double, double>> results;
     for (int x = 0; x < 9; x++)
     {
-        results.push_back(finalLayer.at(x).getActivation());
+        results.at(x) =finalLayer.at(x).getActivation();
     }
 
     emit showLCD0(results.at(0).first);
@@ -635,7 +665,6 @@ vector<pair<double, double>> MainWindow::feedForward(
     emit showLCD8(results.at(8).first);
 
     drawFilteredImage();
-    return results;
 }
 
 void MainWindow::drawFilteredImage()
@@ -674,7 +703,12 @@ void MainWindow::drawFilteredImage()
         }
 
     }
-    ui->graphicsView_2->scene()->addPixmap(QPixmap::fromImage(fImg));
+    if (filteredPixMap) {
+        delete filteredPixMap;
+        filteredPixMap = nullptr;
+    }
+    filteredPixMap = new QPixmap(QPixmap::fromImage(fImg));
+    ui->graphicsView_2->scene()->addPixmap(*filteredPixMap);
 }
 
 
@@ -744,7 +778,18 @@ void MainWindow::setBias(const int &indexA, const int &indexB,
 
 void MainWindow::calculateDeltas()
 {
-    deltas.clear();
+
+    if (deltas.size() > 0)
+    {
+        fill(deltas.begin(), deltas.end(), vector<double>(9, 0));
+        int xCount = 0;
+        for (const auto& x: records)
+        {
+            deltas.at(xCount++) = x.returnDelta();
+        }
+        return;
+    }
+
     for (const auto& x: records)
     {
         deltas.push_back(x.returnDelta());
@@ -775,9 +820,12 @@ void MainWindow::on_pushButton_2_clicked()
         noRecords = false;
 
 
+
         //Take delta for every input
-        for (int repeat = 0; repeat < 100; repeat++)
+        for (int repeat = 0; repeat < 1000; repeat++)
         {
+            ui->graphicsView_2->scene()->clear();
+            ui->graphicsView->scene()->clear();
             sampleCount = 0;
             if (repeat > 0) {
                 for (auto& x:errors) {
@@ -829,9 +877,9 @@ void MainWindow::on_pushButton_2_clicked()
 
             //now have to go with every image
             //calculate the per neuron contribution
-            vector<double> fibreDeltas(200, 0);
-            vector<double> secondFilterFibreDeltas(1800, 0);
-            vector<double> firstFilterFibreDeltas(7200, 0);
+            fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
+            fill(secondFilterFibreDeltas.begin(), secondFilterFibreDeltas.end(), 0);
+            fill(firstFilterFibreDeltas.begin(), firstFilterFibreDeltas.end(), 0);
             vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
                     poolFiltersCache.begin();
             vector<vector<vector<pair<double, double>>>>::iterator
@@ -843,11 +891,12 @@ void MainWindow::on_pushButton_2_clicked()
                     poolAIterator =
                     firstPoolActivationsCache.begin();
             vector<double> uncorrectedSecondPoolWeights = weights.at(2);
-            vector<double> uncorrectedSecondPoolBiases = biases.at(2);
-            vector<double> uncorrectedFirstPoolWeights = weights.at(1);
-            vector<double> uncorrectedFirstPoolBiases = biases.at(1);
-            vector<double> uncorrectedEntryWeights = weights.at(0);
-            vector<double> uncorrectedEntryBiases = biases.at(0);
+
+            uncorrectedSecondPoolBiases = biases.at(2);
+            uncorrectedFirstPoolWeights = weights.at(1);
+            uncorrectedFirstPoolBiases = biases.at(1);
+            uncorrectedEntryWeights = weights.at(0);
+            uncorrectedEntryBiases = biases.at(0);
             int imageNumber = 0;
             for (const auto& image: records)
             {
@@ -915,6 +964,12 @@ void MainWindow::on_pushButton_2_clicked()
                     }
 
                 }
+                for (auto& fibreValue: secondFilterFibreDeltas)
+                {
+                    if (abs(fibreValue) < 0.00001) {
+                        fibreValue = 0;
+                    }
+                }
 
 
                 //bigger filter
@@ -963,6 +1018,13 @@ void MainWindow::on_pushButton_2_clicked()
 
                         uncorrectedFirstPoolBiases.at(i * 144 + topNeuron.first) -=
                                 topNeuron.second * eta;
+                    }
+                }
+
+                for (auto& fibreValues: firstFilterFibreDeltas)
+                {
+                    if (abs(fibreValues) < 0.00001) {
+                        fibreValues = 0;
                     }
                 }
 
@@ -1034,13 +1096,21 @@ void MainWindow::on_pushButton_2_clicked()
                 imageNumber++;
             }
             filterNetwork.flush();
+            int resLength = poolFiltersCache.size();
             poolFiltersCache.clear();
+            poolFiltersCache.reserve(resLength);
+            resLength = topPoolFiltersCache.size();
             topPoolFiltersCache.clear();
+            topPoolFiltersCache.reserve(resLength);
+            resLength = secondPoolActivationsCache.size();
             secondPoolActivationsCache.clear();
+            secondPoolActivationsCache.reserve(resLength);
+            resLength = firstPoolActivationsCache.size();
             firstPoolActivationsCache.clear();
+            firstPoolActivationsCache.reserve(resLength);
             secondPoolMapped = false;
             firstPoolMapped = false;
-            firstPoolMap.clear();
+            firstPoolMap.clear();          
             secondPoolMap.clear();
 
 
