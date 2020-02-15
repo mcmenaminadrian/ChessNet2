@@ -104,7 +104,7 @@ private:
     std::vector<std::pair<double, double>> results;
     std::vector<double> answers;
 
-    const double eta = 0.00075;
+    const double eta = 0.01;
 
 
     void processLine(const QString& lineIn);

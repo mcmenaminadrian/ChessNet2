@@ -822,7 +822,7 @@ void MainWindow::on_pushButton_2_clicked()
 
 
         //Take delta for every input
-        for (int repeat = 0; repeat < 1000; repeat++)
+        for (int repeat = 0; repeat < 4000; repeat++)
         {
             ui->graphicsView_2->scene()->clear();
             ui->graphicsView->scene()->clear();
@@ -859,7 +859,7 @@ void MainWindow::on_pushButton_2_clicked()
 
             vector<double> finalBiases = biases.at(3);
             //at this level we can just use average corrections
-            vector<double> avErrors(0, 9);
+            vector<double> avErrors;
             for (uint i = 0; i < 9; i++)
             {
                 double totalDelta = 0;
@@ -869,6 +869,7 @@ void MainWindow::on_pushButton_2_clicked()
                 }
                 avErrors.push_back(totalDelta/deltas.size());
             }
+            cerr << "Iteration: " << repeat << endl;
             for (const auto& x: avErrors)
             {
                 cerr << "Mean delta for " << numOut++ << " is " << x << endl;
@@ -900,20 +901,35 @@ void MainWindow::on_pushButton_2_clicked()
             int imageNumber = 0;
             for (const auto& image: records)
             {
+                for (int i = 0; i < 9; i++)
+                {
+                    double totalDelta = image.returnDelta().at(i);
+                    double errorImg = image.returnError().at(i);
+                    if (abs(errorImg) < 0.001)
+                    {
+                        continue;
+                    }
+                    for (int j = 0; j < 200; j++)
+                    {
+                        fibreDeltas.at(j) += totalDelta *
+                                finalWeights.at(i * 200 + j);
+                    }
+                }
 
                 for (int i = 0; i < 200; i++)
                 {
                     for (int j = 0; j < 9; j++)
                     {
                         double totalDelta = image.returnDelta().at(j);
-                        if (totalDelta == 0)
+                        double errorImg = image.returnError().at(j);
+                        if (abs(errorImg) < 0.1)
                         {
                             continue;
                         }
                         fibreDeltas.at(i) += totalDelta *
                                 finalWeights.at(i + j * 200);
                     }
-                    if (abs(fibreDeltas.at(i)) < 0.00001) {
+                    if (abs(fibreDeltas.at(i)) < 1e-09) {
                         fibreDeltas.at(i) = 0;
                     }
                 }
@@ -966,7 +982,10 @@ void MainWindow::on_pushButton_2_clicked()
                 }
                 for (auto& fibreValue: secondFilterFibreDeltas)
                 {
-                    if (abs(fibreValue) < 0.00001) {
+                    if (fibreValue == 0) {
+                        continue;
+                    }
+                    if (abs(fibreValue) < 1e-09) {
                         fibreValue = 0;
                     }
                 }
@@ -1023,7 +1042,10 @@ void MainWindow::on_pushButton_2_clicked()
 
                 for (auto& fibreValues: firstFilterFibreDeltas)
                 {
-                    if (abs(fibreValues) < 0.00001) {
+                    if (fibreValues == 0) {
+                        continue;
+                    }
+                    if (abs(fibreValues) < 1e-09) {
                         fibreValues = 0;
                     }
                 }
@@ -1035,18 +1057,15 @@ void MainWindow::on_pushButton_2_clicked()
                     {
                         //get error at neuron
                         double deltaE = firstFilterFibreDeltas.at(i * 144 + j);
-                        if (deltaE == 0)
+                        if (abs(deltaE) < 1e-09)
                         {
                             continue;
                         }
                         double differentiate =
-
                             filterNetwork.
                                 getEntryDifferential(imageNumber * 50 * 144 +
                                                      i * 144 + j);
-
-
-                        if (differentiate == 0)
+                        if (abs(differentiate) < 1e-09)
                         {
                             continue;
                         }
@@ -1073,17 +1092,16 @@ void MainWindow::on_pushButton_2_clicked()
 
                 for (uint j = 0; j < 9; j++)
                 {
+                    if (abs(totalFCLCorrections.at(j)) < 0.000001) {
+                        continue;
+                    }
                     double correction = totalFCLCorrections.at(j) * eta;
-                    for (uint k = 0; k < 50; k++)
+                    for (uint k = 0; k < 200; k++)
                     {
-                        for (uint l = 0; l < 4; l++)
-                        {
-                            double uncorrectedWeight = weights.at(3).at(
-                                        j * 4 + k * 36 + l);
-                            finalWeights.at(j * 4 + k * 36 + l) -=
-                                    (uncorrectedWeight * correction);
-                        }
-
+                        double uncorrectedWeight = weights.at(3).
+                                at(j * 200 + k);
+                        finalWeights.at(j * 200 + k)
+                                -= (uncorrectedWeight * correction);
                     }
                 }
 

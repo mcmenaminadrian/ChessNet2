@@ -11,6 +11,7 @@ public:
     LearningRecord(const QString& iFile, const QString& dFile);
     void addError(const std::vector<std::pair<double, double>>& errors);
     std::vector<double> returnDelta() const;
+    std::vector<double> returnError() const;
 
 private:
     const QString imageFile;

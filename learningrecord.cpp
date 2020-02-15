@@ -24,3 +24,14 @@ std::vector<double> LearningRecord::returnDelta() const
     }
     return reply;
 }
+
+std::vector<double> LearningRecord::returnError() const
+{
+    std::vector<double> reply;
+    reply.reserve(9);
+    for (const auto& x: errRecord)
+    {
+        reply.push_back(x.first);
+    }
+    return reply;
+}
