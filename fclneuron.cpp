@@ -14,15 +14,6 @@ std::pair<double, double> FCLNeuron::setActivation(const double& sum)
     double sigmoid = 1/(1 + exp(-sum));
     activation.first = sigmoid;
     activation.second = sigmoid * (1 - sigmoid);
-   //*/
-    /* different max
-    activation.first = sum;
-    if (activation.first > 0) {
-       activation.second = 1.0;
-    } else {
-        activation.second = -0.1;
-    }
-    */
     inputSum = sum;
     return activation;
 }

@@ -15,6 +15,7 @@
 #include <cmath>
 #include <map>
 #include <set>
+#include <numeric>
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "filterneuron.hpp"
@@ -824,6 +825,7 @@ void MainWindow::on_pushButton_2_clicked()
         //Take delta for every input
         for (int repeat = 0; repeat < 4000; repeat++)
         {
+            double eta = _eta * (1/log(repeat + 2));
             ui->graphicsView_2->scene()->clear();
             ui->graphicsView->scene()->clear();
             sampleCount = 0;
@@ -847,18 +849,12 @@ void MainWindow::on_pushButton_2_clicked()
 
             calculateDeltas();
             uint numOut = 0;
-            double totalError = 0;
-            for (const auto& x: errors)
-            {
-                totalError += x;
-            }
+            double totalError = accumulate(errors.begin(), errors.end(), 0.0);
             cout << "Total Error is " << totalError << endl;
             //final layer
             vector<double> finalWeights = weights.at(3);
-
-
             vector<double> finalBiases = biases.at(3);
-            //at this level we can just use average corrections
+
             vector<double> avErrors;
             for (uint i = 0; i < 9; i++)
             {
@@ -875,7 +871,6 @@ void MainWindow::on_pushButton_2_clicked()
                 cerr << "Mean delta for " << numOut++ << " is " << x << endl;
             }
 
-
             //now have to go with every image
             //calculate the per neuron contribution
             fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
@@ -891,49 +886,36 @@ void MainWindow::on_pushButton_2_clicked()
             vector<vector<vector<pair<double, double>>>>::iterator
                     poolAIterator =
                     firstPoolActivationsCache.begin();
-            vector<double> uncorrectedSecondPoolWeights = weights.at(2);
 
+            vector<double> uncorrectedSecondPoolWeights = weights.at(2);
             uncorrectedSecondPoolBiases = biases.at(2);
             uncorrectedFirstPoolWeights = weights.at(1);
             uncorrectedFirstPoolBiases = biases.at(1);
             uncorrectedEntryWeights = weights.at(0);
             uncorrectedEntryBiases = biases.at(0);
+
             int imageNumber = 0;
             for (const auto& image: records)
             {
+                vector<double> imageDeltas = image.returnDelta();
+                vector<double> imageErrors = image.returnError();
                 for (int i = 0; i < 9; i++)
                 {
-                    double totalDelta = image.returnDelta().at(i);
-                    double errorImg = image.returnError().at(i);
-                    if (abs(errorImg) < 0.001)
+                    double errorImg = imageErrors.at(i);
+                    if (abs(errorImg) < 0.4)
                     {
                         continue;
                     }
+                    double totalDelta = imageDeltas.at(i);
+                    finalBiases.at(i) -= totalDelta * eta;
                     for (int j = 0; j < 200; j++)
                     {
-                        fibreDeltas.at(j) += totalDelta *
-                                finalWeights.at(i * 200 + j);
+                        double localDelta = totalDelta *
+                                weights.at(3).at(i * 200 + j);
+                        fibreDeltas.at(j) += localDelta;
+                        finalWeights.at(i * 200 + j) -= localDelta * eta;
                     }
                 }
-
-                for (int i = 0; i < 200; i++)
-                {
-                    for (int j = 0; j < 9; j++)
-                    {
-                        double totalDelta = image.returnDelta().at(j);
-                        double errorImg = image.returnError().at(j);
-                        if (abs(errorImg) < 0.1)
-                        {
-                            continue;
-                        }
-                        fibreDeltas.at(i) += totalDelta *
-                                finalWeights.at(i + j * 200);
-                    }
-                    if (abs(fibreDeltas.at(i)) < 1e-09) {
-                        fibreDeltas.at(i) = 0;
-                    }
-                }
-
 
                 //back propagate the error
                 //one neuron at a time
@@ -966,28 +948,21 @@ void MainWindow::on_pushButton_2_clicked()
                                 secondPoolMap[topNeuron.first].begin();
                         for (int j = 0; j < 4; j++)
                         {
-                            if (*y > 0) {
+                            if (*y >= 0) {
+                                double localDelta = topNeuron.second *
+                                        weights.at(2).at(i * 4 + j);
                                 secondFilterFibreDeltas.at(i * 36 + *y) +=
-                                        topNeuron.second *
-                                        uncorrectedSecondPoolWeights.at(i * 4 + j);
+                                        localDelta;
                                 uncorrectedSecondPoolWeights.at(i * 4 + j) -=
-                                        topNeuron. second * eta;
+                                        localDelta * eta;
                             }
                         }
 
-                        uncorrectedSecondPoolBiases.at(i * 36 + topNeuron.first) -=
+                        uncorrectedSecondPoolBiases.
+                                at(i * 36 + topNeuron.first) -=
                                 topNeuron.second * eta;
                     }
 
-                }
-                for (auto& fibreValue: secondFilterFibreDeltas)
-                {
-                    if (fibreValue == 0) {
-                        continue;
-                    }
-                    if (abs(fibreValue) < 1e-09) {
-                        fibreValue = 0;
-                    }
                 }
 
 
@@ -1025,28 +1000,21 @@ void MainWindow::on_pushButton_2_clicked()
                                 firstPoolMap[topNeuron.first].begin();
                         for (int j = 0; j < 25; j++)
                         {
-                            if (*y > 0) {
-                                firstFilterFibreDeltas.at(i * 144 + *y) +=
+                            if (*y >= 0) {
+                                double localDelta =
                                         topNeuron.second *
-                                        uncorrectedFirstPoolWeights.
+                                        weights.at(1).
                                         at(i * 25 + j);
+                                firstFilterFibreDeltas.at(i * 144 + *y) +=
+                                        localDelta;
                                 uncorrectedFirstPoolWeights.at(i * 25 + j) -=
-                                        topNeuron. second * eta;
+                                        localDelta * eta;
                             }
                         }
 
-                        uncorrectedFirstPoolBiases.at(i * 144 + topNeuron.first) -=
+                        uncorrectedFirstPoolBiases.
+                                at(i * 144 + topNeuron.first) -=
                                 topNeuron.second * eta;
-                    }
-                }
-
-                for (auto& fibreValues: firstFilterFibreDeltas)
-                {
-                    if (fibreValues == 0) {
-                        continue;
-                    }
-                    if (abs(fibreValues) < 1e-09) {
-                        fibreValues = 0;
                     }
                 }
 
@@ -1057,51 +1025,26 @@ void MainWindow::on_pushButton_2_clicked()
                     {
                         //get error at neuron
                         double deltaE = firstFilterFibreDeltas.at(i * 144 + j);
-                        if (abs(deltaE) < 1e-09)
-                        {
-                            continue;
-                        }
                         double differentiate =
                             filterNetwork.
                                 getEntryDifferential(imageNumber * 50 * 144 +
                                                      i * 144 + j);
-                        if (abs(differentiate) < 1e-09)
+                        double rawCorrection = deltaE * differentiate;
+                        if (rawCorrection == 0)
                         {
                             continue;
                         }
-                        double rawCorrection = deltaE * differentiate;
                         for (int k = 0; k < 25; k++)
                         {
+                            double localDelta = rawCorrection *
+                                    weights.at(0).at(i * 25 + k);
+
                             uncorrectedEntryWeights.at(i * 25 + k) -=
-                                    rawCorrection * eta;
+                                    localDelta * eta;
+
                         }
                         uncorrectedEntryBiases.at(i * 144 + j) -=
                                 rawCorrection * eta;
-                    }
-                }
-
-
-                vector<double> totalFCLCorrections(9,0);
-                vector<double>::iterator fclIterator =
-                        totalFCLCorrections.begin();
-                for (const auto& x: deltas.at(imageNumber))
-                {
-                   *fclIterator++ += x;
-                }
-
-
-                for (uint j = 0; j < 9; j++)
-                {
-                    if (abs(totalFCLCorrections.at(j)) < 0.000001) {
-                        continue;
-                    }
-                    double correction = totalFCLCorrections.at(j) * eta;
-                    for (uint k = 0; k < 200; k++)
-                    {
-                        double uncorrectedWeight = weights.at(3).
-                                at(j * 200 + k);
-                        finalWeights.at(j * 200 + k)
-                                -= (uncorrectedWeight * correction);
                     }
                 }
 
@@ -1132,11 +1075,6 @@ void MainWindow::on_pushButton_2_clicked()
             secondPoolMap.clear();
 
 
-            for (uint j = 0; j < 9; j++)
-            {
-                   double correction = avErrors.at(j);
-                   finalBiases.at(j) -= correction * eta;
-            }
 
             weights.at(0) = uncorrectedEntryWeights;
             biases.at(0) = uncorrectedEntryBiases;
