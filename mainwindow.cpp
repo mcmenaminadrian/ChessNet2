@@ -924,23 +924,17 @@ void MainWindow::on_pushButton_2_clicked()
                         *poolBIterator++;
                 for (int i = 0; i < 50; i++)
                 {
-                    map<int, double> fpcCorrections;
+                    vector<pair<int, double>> fpcCorrections;
                     vector<FinalPoolCache> localCache = imageFPCache.at(i);
                     vector<pair<double, double>> localActivations =
                             imagePoolBCache.at(i);
-                    map<int, double>::iterator corrIT;
                     int cacheCount = 0;
                     for (const auto& x: localCache)
                     {
-                        double currentCorrection = 0;
-                        corrIT = fpcCorrections.find(x.getPixel());
-                        if (corrIT != fpcCorrections.end())
-                        {
-                            currentCorrection = corrIT->second;
-                        }
-                        fpcCorrections[x.getPixel()] = currentCorrection +
-                                localActivations.at(x.getPixel()).second *
-                                fibreDeltas.at(i * 4 + cacheCount++);
+                        fpcCorrections.push_back(pair<int, double>
+                            (x.getPixel(),
+                             localActivations.at(x.getPixel()).second *
+                                fibreDeltas.at(i * 4 + cacheCount++)));
                     }
                     for (const auto& topNeuron: fpcCorrections)
                     {
@@ -957,41 +951,30 @@ void MainWindow::on_pushButton_2_clicked()
                                         localDelta * eta;
                             }
                         }
-
                         uncorrectedSecondPoolBiases.
                                 at(i * 36 + topNeuron.first) -=
                                 topNeuron.second * eta;
                     }
-
                 }
 
-
                 //bigger filter
-
-
                 vector<vector<FinalPoolCache>> imageTPCache = *tpIterator++;
                 vector<vector<pair<double, double>>> imagePoolACache =
                         *poolAIterator++;
                 for (int i = 0; i < 50; i++)
                 {
-                    map<int, double> spCorrections;
+                    vector<pair<int, double>> spCorrections;
                     vector<FinalPoolCache> localTPCache = imageTPCache.at(i);
                     vector<pair<double, double>> localPActivations =
                             imagePoolACache.at(i);
-                    map<int, double>::iterator corrAIT;
                     int cacheCount = 0;
                     for (const auto& x: localTPCache)
-                    {
-                        double currentCorrection = 0;
-                        corrAIT = spCorrections.find(x.getPixel());
-                        if (corrAIT != spCorrections.end())
-                        {
-                            currentCorrection = corrAIT->second;
-                        }
-                        spCorrections[x.getPixel()] = currentCorrection +
-                                localPActivations.at(x.getPixel()).second *
-                                secondFilterFibreDeltas.
-                                at(i * 36 + cacheCount++);
+                    {                       
+                        spCorrections.push_back(pair<int, double>
+                            (x.getPixel(),
+                             localPActivations.at(x.getPixel()).second *
+                                secondFilterFibreDeltas.at(i * 36 +
+                                    cacheCount++)));
                     }
                     for (const auto& topNeuron: spCorrections)
                     {
