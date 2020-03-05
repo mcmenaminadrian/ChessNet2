@@ -280,15 +280,17 @@ void MainWindow::processLine(const QString& lineIn)
     vector<double>::iterator itExpect = answers.begin();
 
     vector<pair<double, double>> errDiff;
+    vector<double> activations;
     errDiff.reserve(errors.size());
     vector<double>::iterator itErr = errors.begin();
     for (const auto& x: results)
     {
+        activations.push_back(x.first);
         double errVal = x.first - *itExpect++;
         errDiff.push_back(pair<double, double>(errVal, x.second));
         *itErr++ += pow(errVal, 2);
     }
-    records.at(sampleCount++).addError(errDiff);
+    records.at(sampleCount++).addError(errDiff, activations);
     ui->pushButton_2->setDisabled(false);
 }
 
@@ -944,7 +946,6 @@ void MainWindow::on_pushButton_2_clicked()
                         double act = imageFPCache.at(j/4).at(j%4).getValue();
                         double diff = act * localDelta * eta;
                         finalWeights.at(i * 200 + j) -= diff;
-
                     }
                 }
 

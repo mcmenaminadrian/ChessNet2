@@ -9,9 +9,16 @@ LearningRecord::LearningRecord(const QString& iFile, const QString& dFile):
 }
 
 void LearningRecord::addError(const std::vector<
-                              std::pair<double, double>> &errors)
+                              std::pair<double, double>> &errors,
+                              const std::vector<double>& activation)
 {
     errRecord = errors;
+    active = activation;
+}
+
+std::vector<double> LearningRecord::returnActivation() const
+{
+    return active;
 }
 
 std::vector<double> LearningRecord::returnDelta() const
