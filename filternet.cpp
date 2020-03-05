@@ -74,10 +74,23 @@ std::pair<double, double>
     return filtersBottom.at(i).at(y * FILTERW + x).getActivation();
 }
 
+std::pair<double, double> FilterNet::_filterValueB(const int i,
+                                                   const int u) const
+{
+    return filtersBottom.at(i).at(u).getActivation();
+}
+
 std::pair<double, double> FilterNet::filterPoolB(const int i, const int x,
                                             const int y, const int REDW) const
 {
     return poolBottom.at(i).at(y * REDW + x).getActivation();
+}
+
+
+std::pair<double, double> FilterNet::_filterPoolB(const int i,
+                                                  const int u) const
+{
+    return poolBottom.at(i).at(u).getActivation();
 }
 
 std::pair<double, double> FilterNet::poolValue(const int i, const int x,
@@ -101,12 +114,10 @@ std::pair<double, double> FilterNet::buildPoolConv(const int filter,
             setActivation(value);
 }
 
-void FilterNet::buildSecondPool(const int filter, const int row,
-                                const int col, const double &value,
-                                const int factor, const int REDW)
+void FilterNet::buildSecondPool(const int filter, const int index,
+                                const double &value)
 {
-    lastPool.at(filter).at((row * REDW/factor)/factor +
-                           col/factor).setPool(value);
+    lastPool.at(filter).at(index).setPool(value);
 }
 
 std::pair<double, double> FilterNet::secondConsume(
@@ -128,6 +139,7 @@ double FilterNet::consume(MainWindow* pMW, const int filter,
     int offsetIntoWeights = filter * FILTERG * FILTERG;
     double sum = 0;
     int x = 0;
+
     for (const auto& iVal: value) {
         sum += pMW->getWeight(0, offsetIntoWeights + x++) * iVal;
     }
@@ -136,6 +148,17 @@ double FilterNet::consume(MainWindow* pMW, const int filter,
             at(row * FILTERW + col).setActivation(sum);
     entryDifferentials.push_back(activationE.second);
     return sum;
+}
+
+void FilterNet::addImageMap(const std::vector<std::vector<int>> &imgMap)
+{
+    imageMap.push_back(imgMap);
+}
+
+int FilterNet::getPixelValue(const int image, const int grid,
+                             const int input) const
+{
+    return imageMap.at(image).at(grid).at(input);
 }
 
 double FilterNet::getEntryDifferential(const int index) const

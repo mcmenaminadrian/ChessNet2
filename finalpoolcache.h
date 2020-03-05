@@ -7,11 +7,13 @@
 class FinalPoolCache
 {
 public:
-    FinalPoolCache(const int& pixNo);
+    FinalPoolCache(const int& pixNo, const double& val);
     int getPixel() const;
+    double getValue() const;
 
 
 private:
+    const double value;
     const int selectedPixel;
 };
 

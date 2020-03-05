@@ -23,6 +23,26 @@
 #include "fclneuron.h"
 #include "finalpoolcache.h"
 
+/********************************************************************
+ * STRUCTURE OF NETWORK
+ * 50 fibres and 9 classification outputs
+ * Input to layer 1, active (5 x 5) - 144 neurons per filter
+ * Input weights
+ * Layer 1 to layer 2, active (5 x 5) - 144 neurons per filter
+ * weights
+ * Then pooling to 6x6 filters (2 x 2)
+ * No weights here
+ * This pooling layer is active to second 6 x 6 layer
+ * weights
+ * Second 6 x 6 layer then pooled to 2 x 2 layer
+ * No weights
+ * 2 x 2 layer pool not active - fully connected to 9 output neurons
+ * weights (1800)
+ * Weights at this pointed ordered by output neuron
+ * ie weights 0 - 199 go to output neuron 0,
+ * 200 - 399 to output neuron 1 etc
+ * ******************************************************************/
+
 
 
 using namespace std;
@@ -54,6 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(this, SIGNAL(showLCD8(const double&)),
                      this, SLOT(updateLCD8(const double&)));
     noRecords = true;
+    noImages = true;
     qGS = new QGraphicsScene();
     qFS = new QGraphicsScene();
     ui->graphicsView->setScene(qGS);
@@ -269,7 +290,6 @@ void MainWindow::processLine(const QString& lineIn)
     }
     records.at(sampleCount++).addError(errDiff);
     ui->pushButton_2->setDisabled(false);
-
 }
 
 void MainWindow::saveWeights()
@@ -392,7 +412,6 @@ void MainWindow::generateWeights()
     weights.push_back(poolLayerWeights);
     biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW / 4, -0.5));
 
-
     //to fully connected layer
     vector<double> fclWeights;
     for (auto f=0; f<FILTERS; f++) {
@@ -407,16 +426,17 @@ void MainWindow::generateWeights()
 
     weights.push_back(fclWeights);
     biases.push_back(vector<double>(CATS, -0.5));
-
 }
 
 void MainWindow::feedForward(const vector<vector<int>>& imgMap)
 {
-
     fclSums.clear();
     fclSums.reserve(9);
     ui->pushButton_2->setDisabled(true);
     //top layer
+    if (noImages) {
+        filterNetwork.addImageMap(imgMap);
+    }
     for (int i = 0; i < FILTERS; i++)
     {
         uint indexOrig = 0;
@@ -524,7 +544,8 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
                 int maxPosition = distance(begin(cellValues), maxVal);
                 position += (maxPosition/SPAN) * FILTERW;
                 position += maxPosition%SPAN;
-                firstLocalPoolCache.push_back(FinalPoolCache(position));
+                firstLocalPoolCache.push_back(FinalPoolCache(position,
+                                              cellValues.at(maxPosition)));
             }
         }
         thisImageFirstPoolCache.push_back(firstLocalPoolCache);
@@ -609,6 +630,7 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
     for (int filter = 0; filter < FILTERS; filter++) {
         vector<FinalPoolCache> localCache;
         localCache.reserve(4);
+        int indexInsert = 0;
         for (int row = 0; row <= REDH - SECOND_SPAN; row += SECOND_SPAN) {
             for (int col = 0; col <= REDW - SECOND_SPAN; col+= SECOND_SPAN) {
                 vector<double> cellValues;
@@ -620,13 +642,13 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
                 }
                 auto maxVal = std::max_element(std::begin(cellValues),
                                                std::end(cellValues));
-                filterNetwork.buildSecondPool(filter, row, col, *maxVal,
-                                              SECOND_SPAN, REDW);
                 int position = col + row * REDW;
                 int maxPosition = distance(begin(cellValues), maxVal);
                 position += (maxPosition/SECOND_SPAN) * REDW;
                 position += maxPosition%SECOND_SPAN;
-                localCache.push_back(FinalPoolCache(position));
+                filterNetwork.buildSecondPool(filter, indexInsert++, *maxVal);
+                localCache.push_back(FinalPoolCache(position,
+                                     cellValues.at(maxPosition)));
             }
         }
         thisImageFinalPoolCache.push_back(localCache);
@@ -819,7 +841,7 @@ void MainWindow::on_pushButton_2_clicked()
                         QMessageBox::Ok);
         qMB.exec();
         noRecords = false;
-
+        noImages = false;
 
 
         //Take delta for every input
@@ -854,8 +876,9 @@ void MainWindow::on_pushButton_2_clicked()
             //final layer
             vector<double> finalWeights = weights.at(3);
             vector<double> finalBiases = biases.at(3);
-
-            vector<double> avErrors;
+            vector<double>::iterator _itErr = errors.begin();
+            vector<double> averageErrors;
+            vector<double> avDeltas;
             for (uint i = 0; i < 9; i++)
             {
                 double totalDelta = 0;
@@ -863,12 +886,16 @@ void MainWindow::on_pushButton_2_clicked()
                 {
                     totalDelta += x.at(i);
                 }
-                avErrors.push_back(totalDelta/deltas.size());
+                avDeltas.push_back(totalDelta/deltas.size());
+                averageErrors.push_back(*_itErr++/deltas.size());
             }
             cerr << "Iteration: " << repeat << endl;
-            for (const auto& x: avErrors)
+            _itErr = averageErrors.begin();
+            for (const auto& x: avDeltas)
             {
-                cerr << "Mean delta for " << numOut++ << " is " << x << endl;
+
+                cerr << "Mean delta for " << numOut++ << " is: " << x;
+                cerr << " Mean error is: " << *_itErr++ << endl;
             }
 
             //now have to go with every image
@@ -899,10 +926,11 @@ void MainWindow::on_pushButton_2_clicked()
             {
                 vector<double> imageDeltas = image.returnDelta();
                 vector<double> imageErrors = image.returnError();
+                vector<vector<FinalPoolCache>> imageFPCache = *fpcIterator++;
                 for (int i = 0; i < 9; i++)
                 {
                     double errorImg = imageErrors.at(i);
-                    if (abs(errorImg) < 0.4)
+                    if (abs(errorImg) < 0.1)
                     {
                         continue;
                     }
@@ -913,19 +941,26 @@ void MainWindow::on_pushButton_2_clicked()
                         double localDelta = totalDelta *
                                 weights.at(3).at(i * 200 + j);
                         fibreDeltas.at(j) += localDelta;
-                        finalWeights.at(i * 200 + j) -= localDelta * eta;
+                        double act = imageFPCache.at(j/4).at(j%4).getValue();
+                        double diff = act * localDelta * eta;
+                        finalWeights.at(i * 200 + j) -= diff;
+
                     }
                 }
 
                 //back propagate the error
                 //one neuron at a time
-                vector<vector<FinalPoolCache>> imageFPCache = *fpcIterator++;
+                //imagePoolBCache caches second layer of 6 x 6 filters
                 vector<vector<pair<double, double>>> imagePoolBCache =
                         *poolBIterator++;
+                vector<vector<FinalPoolCache>> prevIActs = *tpIterator;
                 for (int i = 0; i < 50; i++)
                 {
+                    vector<FinalPoolCache> prevAct = prevIActs.at(i);
                     vector<pair<int, double>> fpcCorrections;
+                    //localCache tells us which neurons make the pool
                     vector<FinalPoolCache> localCache = imageFPCache.at(i);
+                    //per fibre activations in localActivations (this layer)
                     vector<pair<double, double>> localActivations =
                             imagePoolBCache.at(i);
                     int cacheCount = 0;
@@ -938,18 +973,26 @@ void MainWindow::on_pushButton_2_clicked()
                     }
                     for (const auto& topNeuron: fpcCorrections)
                     {
-                        vector<int>::iterator y =
-                                secondPoolMap[topNeuron.first].begin();
-                        for (int j = 0; j < 4; j++)
+                        //topNeuron.second now has a delta which maps to <=4
+                        //neurons in previous layer
+                        //secondPoolMap maps those four neurons
+
+                        for (auto y = secondPoolMap[topNeuron.first].begin();
+                             y != secondPoolMap[topNeuron.first].end(); y++)
                         {
-                            if (*y >= 0) {
-                                double localDelta = topNeuron.second *
-                                        weights.at(2).at(i * 4 + j);
-                                secondFilterFibreDeltas.at(i * 36 + *y) +=
-                                        localDelta;
-                                uncorrectedSecondPoolWeights.at(i * 4 + j) -=
-                                        localDelta * eta;
+                            auto j = distance(
+                                secondPoolMap[topNeuron.first].begin(), y);
+                            if (*y < 0)
+                            {
+                                continue;
                             }
+                            double localDelta = topNeuron.second *
+                                    weights.at(2).at(i * 4 + j);
+                            secondFilterFibreDeltas.at(i * 36 + *y) +=
+                                    localDelta;
+                            double neuroAct = prevAct.at(*y).getValue();
+                            uncorrectedSecondPoolWeights.at(i * 4 + j) -=
+                                    neuroAct * localDelta * eta;
                         }
                         uncorrectedSecondPoolBiases.
                                 at(i * 36 + topNeuron.first) -=
@@ -958,6 +1001,7 @@ void MainWindow::on_pushButton_2_clicked()
                 }
 
                 //bigger filter
+                tpIterator = topPoolFiltersCache.begin();
                 vector<vector<FinalPoolCache>> imageTPCache = *tpIterator++;
                 vector<vector<pair<double, double>>> imagePoolACache =
                         *poolAIterator++;
@@ -976,25 +1020,27 @@ void MainWindow::on_pushButton_2_clicked()
                                 secondFilterFibreDeltas.at(i * 36 +
                                     cacheCount++)));
                     }
+
                     for (const auto& topNeuron: spCorrections)
                     {
 
-                        vector<int>::iterator y =
-                                firstPoolMap[topNeuron.first].begin();
-                        for (int j = 0; j < 25; j++)
+                        for (auto y = firstPoolMap[topNeuron.first].begin();
+                             y != firstPoolMap[topNeuron.first].end(); y++)
                         {
-                            if (*y >= 0) {
-                                double localDelta =
-                                        topNeuron.second *
-                                        weights.at(1).
-                                        at(i * 25 + j);
-                                firstFilterFibreDeltas.at(i * 144 + *y) +=
-                                        localDelta;
-                                uncorrectedFirstPoolWeights.at(i * 25 + j) -=
-                                        localDelta * eta;
+                            auto j = distance(
+                                firstPoolMap[topNeuron.first].begin(), y);
+                            if (*y < 0)
+                            {
+                                continue;
                             }
+                            double localDelta = topNeuron.second *
+                                    weights.at(1).at(i * 25 + j);
+                            firstFilterFibreDeltas.at(i * 144 + *y) +=
+                                    localDelta;
+                            double neuroAct = imagePoolACache.at(i).at(*y).first;
+                            uncorrectedFirstPoolWeights.at(i * 25 + j) -=
+                                    neuroAct * localDelta * eta;
                         }
-
                         uncorrectedFirstPoolBiases.
                                 at(i * 144 + topNeuron.first) -=
                                 topNeuron.second * eta;
@@ -1023,6 +1069,8 @@ void MainWindow::on_pushButton_2_clicked()
                                     weights.at(0).at(i * 25 + k);
 
                             uncorrectedEntryWeights.at(i * 25 + k) -=
+                                    filterNetwork.getPixelValue(
+                                        imageNumber, j, k) *
                                     localDelta * eta;
 
                         }

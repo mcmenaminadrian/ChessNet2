@@ -104,7 +104,7 @@ private:
     std::vector<std::pair<double, double>> results;
     std::vector<double> answers;
 
-    double _eta = 0.05;
+    double _eta = 0.0005;
 
 
     void processLine(const QString& lineIn);
@@ -119,5 +119,6 @@ private:
     void calculateDeltas();
     std::vector<LearningRecord> records;
     bool noRecords;
+    bool noImages;
 };
 #endif // MAINWINDOW_H
