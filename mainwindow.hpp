@@ -96,6 +96,8 @@ private:
     std::vector<double> fibreDeltas;
     std::vector<double> secondFilterFibreDeltas;
     std::vector<double> firstFilterFibreDeltas;
+    std::vector<double> finalWeights;
+    std::vector<double> uncorrectedSecondPoolWeights;
     std::vector<double> uncorrectedSecondPoolBiases;
     std::vector<double> uncorrectedFirstPoolWeights;
     std::vector<double> uncorrectedFirstPoolBiases;

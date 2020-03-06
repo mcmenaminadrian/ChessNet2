@@ -86,6 +86,9 @@ MainWindow::MainWindow(QWidget *parent)
     uncorrectedSecondPoolBiases = vector<double>(1800, 0);
     uncorrectedFirstPoolWeights = vector<double>(1250, 0);
     uncorrectedFirstPoolBiases = vector<double>(7200, 0);
+    uncorrectedSecondPoolWeights =
+            vector<double>(200, 0.0);
+    finalWeights = vector<double>(1800, 0);
     uncorrectedEntryWeights = vector<double>(1250, 0);
     uncorrectedEntryBiases = vector<double>(7200, 0);
     results = vector<pair<double, double>>(9, pair<double, double>(0, 0));
@@ -876,7 +879,6 @@ void MainWindow::on_pushButton_2_clicked()
             double totalError = accumulate(errors.begin(), errors.end(), 0.0);
             cout << "Total Error is " << totalError << endl;
             //final layer
-            vector<double> finalWeights = weights.at(3);
             vector<double> finalBiases = biases.at(3);
             vector<double>::iterator _itErr = errors.begin();
             vector<double> averageErrors;
@@ -916,11 +918,10 @@ void MainWindow::on_pushButton_2_clicked()
                     poolAIterator =
                     firstPoolActivationsCache.begin();
 
-            vector<double> uncorrectedSecondPoolWeights = weights.at(2);
-            uncorrectedSecondPoolBiases = biases.at(2);
-            uncorrectedFirstPoolWeights = weights.at(1);
+            vector<double> uncorrectedSecondPoolWeights =
+                    vector<double>(weights.at(2).size(), 0.0);
+            uncorrectedSecondPoolBiases = biases.at(2);           
             uncorrectedFirstPoolBiases = biases.at(1);
-            uncorrectedEntryWeights = weights.at(0);
             uncorrectedEntryBiases = biases.at(0);
 
             int imageNumber = 0;
@@ -1002,7 +1003,7 @@ void MainWindow::on_pushButton_2_clicked()
                 }
 
                 //bigger filter
-                tpIterator = topPoolFiltersCache.begin();
+
                 vector<vector<FinalPoolCache>> imageTPCache = *tpIterator++;
                 vector<vector<pair<double, double>>> imagePoolACache =
                         *poolAIterator++;
@@ -1107,13 +1108,36 @@ void MainWindow::on_pushButton_2_clicked()
             secondPoolMap.clear();
 
 
-
-            weights.at(0) = uncorrectedEntryWeights;
+            auto entrySummation = vector<double>(weights.at(0).size(), 0.0);
+            transform(weights.at(0).begin(), weights.at(0).end(),
+                      uncorrectedEntryWeights.begin(), entrySummation.begin(),
+                      plus<double>());
+            weights.at(0) = entrySummation;
+            fill(uncorrectedEntryWeights.begin(), uncorrectedEntryWeights.end(),
+                 0.0);
             biases.at(0) = uncorrectedEntryBiases;
-            weights.at(1) = uncorrectedFirstPoolWeights;
+            auto secondSummation = vector<double>(weights.at(1).size(), 0.0);
+            transform(weights.at(1).begin(), weights.at(1).end(),
+                      uncorrectedFirstPoolWeights.begin(),
+                      secondSummation.begin(),
+                      plus<double>());
+            weights.at(1) = secondSummation;
+            fill(uncorrectedFirstPoolWeights.begin(),
+                 uncorrectedFirstPoolWeights.end(), 0.0);
             biases.at(1) = uncorrectedFirstPoolBiases;
-            weights.at(2) = uncorrectedSecondPoolWeights;
-            weights.at(3) = finalWeights;
+            auto middleSummation = vector<double>(weights.at(2).size(), 0.0);
+            transform(weights.at(2).begin(), weights.at(2).end(),
+                      uncorrectedSecondPoolWeights.begin(), middleSummation.begin(),
+                      plus<double>());
+            weights.at(2) = middleSummation;
+            fill(uncorrectedSecondPoolWeights.begin(),
+                 uncorrectedSecondPoolWeights.end(), 0.0)
+            auto finalSummation = vector<double>(weights.at(3).size(), 0.0);
+            transform(weights.at(3).begin(), weights.at(3).end(),
+                      finalWeights.begin(), finalSummation.begin(),
+                      plus<double>());
+            weights.at(3) = finalSummation;
+            fill(finalWeights.begin(), finalWeights.end(), 0.0);
             biases.at(2) = uncorrectedSecondPoolBiases;
             biases.at(3) = finalBiases;
             saveWeights();
