@@ -8,7 +8,6 @@
 #include <QImage>
 #include <QPixmap>
 #include <QChar>
-#include <QThread>
 #include <vector>
 #include <algorithm>
 #include <ctime>
@@ -16,6 +15,7 @@
 #include <map>
 #include <set>
 #include <numeric>
+#include <thread>
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
 #include "filterneuron.hpp"
@@ -46,6 +46,23 @@
 
 
 using namespace std;
+
+//functions for multithreading work
+
+void clearDeltas(vector<double>& fd)
+{
+    fill(fd.begin(), fd.end(), 0.0);
+}
+
+void sumVectors(vector<double>& toUpdate, vector<double>& diffVector)
+{
+    auto summationVector = vector<double>(toUpdate.size(), 0.0);
+    transform(toUpdate.begin(), toUpdate.end(), diffVector.begin(),
+              summationVector.begin(), plus<double>());
+    toUpdate = summationVector;
+    fill(diffVector.begin(), diffVector.end(), 0.0);
+}
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -918,8 +935,6 @@ void MainWindow::on_pushButton_2_clicked()
                     poolAIterator =
                     firstPoolActivationsCache.begin();
 
-            vector<double> uncorrectedSecondPoolWeights =
-                    vector<double>(weights.at(2).size(), 0.0);
             uncorrectedSecondPoolBiases = biases.at(2);           
             uncorrectedFirstPoolBiases = biases.at(1);
             uncorrectedEntryBiases = biases.at(0);
@@ -933,7 +948,7 @@ void MainWindow::on_pushButton_2_clicked()
                 for (int i = 0; i < 9; i++)
                 {
                     double errorImg = imageErrors.at(i);
-                    if (abs(errorImg) < 0.1)
+                    if (abs(errorImg) < 0.4)
                     {
                         continue;
                     }
@@ -1082,13 +1097,31 @@ void MainWindow::on_pushButton_2_clicked()
                 }
 
                 //reset to zero
-                fill(fibreDeltas.begin(), fibreDeltas.end(), 0);
-                fill(secondFilterFibreDeltas.begin(),
-                     secondFilterFibreDeltas.end(), 0);
-                fill(firstFilterFibreDeltas.begin(),
-                     firstFilterFibreDeltas.end(), 0);
+                std::thread clearFD(std::ref(clearDeltas),
+                                    std::ref(fibreDeltas));
+                std::thread clearSFFD(std::ref(clearDeltas),
+                                      std::ref(secondFilterFibreDeltas));
+                std::thread clearFFFD(std::ref(clearDeltas),
+                                      std::ref(firstFilterFibreDeltas));
+                clearFD.join();
+                clearSFFD.join();
+                clearFFFD.join();
+
+
                 imageNumber++;
             }
+
+
+
+
+            std::thread sumZero(sumVectors, std::ref(weights.at(0)),
+                                std::ref(uncorrectedEntryWeights));
+            std::thread sumOne(sumVectors, std::ref(weights.at(1)),
+                               std::ref(uncorrectedFirstPoolWeights));
+            std::thread sumTwo(sumVectors, std::ref(weights.at(2)),
+                               std::ref(uncorrectedSecondPoolWeights));
+            std::thread sumThree(sumVectors, std::ref(weights.at(3)),
+                                 std::ref(finalWeights));
             filterNetwork.flush();
             int resLength = poolFiltersCache.size();
             poolFiltersCache.clear();
@@ -1104,42 +1137,16 @@ void MainWindow::on_pushButton_2_clicked()
             firstPoolActivationsCache.reserve(resLength);
             secondPoolMapped = false;
             firstPoolMapped = false;
-            firstPoolMap.clear();          
+            firstPoolMap.clear();
             secondPoolMap.clear();
-
-
-            auto entrySummation = vector<double>(weights.at(0).size(), 0.0);
-            transform(weights.at(0).begin(), weights.at(0).end(),
-                      uncorrectedEntryWeights.begin(), entrySummation.begin(),
-                      plus<double>());
-            weights.at(0) = entrySummation;
-            fill(uncorrectedEntryWeights.begin(), uncorrectedEntryWeights.end(),
-                 0.0);
             biases.at(0) = uncorrectedEntryBiases;
-            auto secondSummation = vector<double>(weights.at(1).size(), 0.0);
-            transform(weights.at(1).begin(), weights.at(1).end(),
-                      uncorrectedFirstPoolWeights.begin(),
-                      secondSummation.begin(),
-                      plus<double>());
-            weights.at(1) = secondSummation;
-            fill(uncorrectedFirstPoolWeights.begin(),
-                 uncorrectedFirstPoolWeights.end(), 0.0);
             biases.at(1) = uncorrectedFirstPoolBiases;
-            auto middleSummation = vector<double>(weights.at(2).size(), 0.0);
-            transform(weights.at(2).begin(), weights.at(2).end(),
-                      uncorrectedSecondPoolWeights.begin(), middleSummation.begin(),
-                      plus<double>());
-            weights.at(2) = middleSummation;
-            fill(uncorrectedSecondPoolWeights.begin(),
-                 uncorrectedSecondPoolWeights.end(), 0.0)
-            auto finalSummation = vector<double>(weights.at(3).size(), 0.0);
-            transform(weights.at(3).begin(), weights.at(3).end(),
-                      finalWeights.begin(), finalSummation.begin(),
-                      plus<double>());
-            weights.at(3) = finalSummation;
-            fill(finalWeights.begin(), finalWeights.end(), 0.0);
             biases.at(2) = uncorrectedSecondPoolBiases;
             biases.at(3) = finalBiases;
+            sumTwo.join();
+            sumThree.join();
+            sumZero.join();
+            sumOne.join();
             saveWeights();
         }
     }
