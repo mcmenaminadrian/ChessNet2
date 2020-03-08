@@ -32,39 +32,39 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-    double getWeight(const int& indexA, const int& indexB) const;
-    double getBias(const int& indexA, const int& indexB) const;
-    void setWeight(const int& indexA, const int& indexB, const double& weight);
-    void setBias(const int& indexA, const int& indexB, const double& bias);
+    long  double getWeight(const int& indexA, const int& indexB) const;
+    long  double getBias(const int& indexA, const int& indexB) const;
+    void setWeight(const int& indexA, const int& indexB, const long  double& weight);
+    void setBias(const int& indexA, const int& indexB, const long  double& bias);
 
 public slots:
     void updateJPEG(const QImage jpegName);
 
 signals:
     void showJPEG(const QImage fileName);
-    void showLCD0(const double& num);
-    void showLCD1(const double& num);
-    void showLCD2(const double& num);
-    void showLCD3(const double& num);
-    void showLCD4(const double& num);
-    void showLCD5(const double& num);
-    void showLCD6(const double& num);
-    void showLCD7(const double& num);
-    void showLCD8(const double& num);
+    void showLCD0(const long  double& num);
+    void showLCD1(const long  double& num);
+    void showLCD2(const long  double& num);
+    void showLCD3(const long  double& num);
+    void showLCD4(const long  double& num);
+    void showLCD5(const long  double& num);
+    void showLCD6(const long  double& num);
+    void showLCD7(const long  double& num);
+    void showLCD8(const long  double& num);
 
 private slots:
     void on_pushButton_clicked();
 
     void on_pushButton_2_clicked();
-    void updateLCD0(const double& num);
-    void updateLCD1(const double& num);
-    void updateLCD2(const double& num);
-    void updateLCD3(const double& num);
-    void updateLCD4(const double& num);
-    void updateLCD5(const double& num);
-    void updateLCD6(const double& num);
-    void updateLCD7(const double& num);
-    void updateLCD8(const double& num);
+    void updateLCD0(const long  double& num);
+    void updateLCD1(const long  double& num);
+    void updateLCD2(const long  double& num);
+    void updateLCD3(const long  double& num);
+    void updateLCD4(const long  double& num);
+    void updateLCD5(const long  double& num);
+    void updateLCD6(const long  double& num);
+    void updateLCD7(const long  double& num);
+    void updateLCD8(const long  double& num);
 
 
 private:
@@ -73,40 +73,40 @@ private:
     QPixmap *filteredPixMap;
     QGraphicsScene *qGS, *qFS;
     FilterNet filterNetwork;
-    std::vector<std::vector<double>> weights;
-    std::vector<std::vector<double>> biases;
+    std::vector<std::vector<long  double>> weights;
+    std::vector<std::vector<long  double>> biases;
     QTextStream *in;
     std::vector<FCLNeuron> finalLayer;
     QString csvFileName;
     QFile *csvFile;
-    std::vector<double> errors;
+    std::vector<long double> errors;
     uint sampleCount;
-    std::vector<double> fclSums;
-    std::vector<std::vector<double>> deltas;
+    std::vector<long double> fclSums;
+    std::vector<std::vector<long double>> deltas;
     std::vector<std::vector<std::vector<FinalPoolCache>>> poolFiltersCache;
     std::vector<std::vector<std::vector<FinalPoolCache>>> topPoolFiltersCache;
-    std::vector<std::vector<std::vector<std::pair<double, double>>>>
+    std::vector<std::vector<std::vector<std::pair<long double, long double>>>>
         secondPoolActivationsCache;
-    std::vector<std::vector<std::vector<std::pair<double, double>>>>
+    std::vector<std::vector<std::vector<std::pair<long double, long double>>>>
         firstPoolActivationsCache;
     bool secondPoolMapped;
     bool firstPoolMapped;
     std::map<int, std::vector<int>> secondPoolMap;
     std::map<int, std::vector<int>> firstPoolMap;
-    std::vector<double> fibreDeltas;
-    std::vector<double> secondFilterFibreDeltas;
-    std::vector<double> firstFilterFibreDeltas;
-    std::vector<double> finalWeights;
-    std::vector<double> uncorrectedSecondPoolWeights;
-    std::vector<double> uncorrectedSecondPoolBiases;
-    std::vector<double> uncorrectedFirstPoolWeights;
-    std::vector<double> uncorrectedFirstPoolBiases;
-    std::vector<double> uncorrectedEntryWeights;
-    std::vector<double> uncorrectedEntryBiases;
-    std::vector<std::pair<double, double>> results;
-    std::vector<double> answers;
+    std::vector<long double> fibreDeltas;
+    std::vector<long double> secondFilterFibreDeltas;
+    std::vector<long double> firstFilterFibreDeltas;
+    std::vector<long double> finalWeights;
+    std::vector<long double> uncorrectedSecondPoolWeights;
+    std::vector<long double> uncorrectedSecondPoolBiases;
+    std::vector<long double> uncorrectedFirstPoolWeights;
+    std::vector<long double> uncorrectedFirstPoolBiases;
+    std::vector<long double> uncorrectedEntryWeights;
+    std::vector<long double> uncorrectedEntryBiases;
+    std::vector<std::pair<long double, long double>> results;
+    std::vector<long double> answers;
 
-    double _eta = 0.001;
+    long double _eta = 0.001;
 
 
     void processLine(const QString& lineIn);

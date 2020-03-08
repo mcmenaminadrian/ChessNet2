@@ -8,7 +8,7 @@
 
 using namespace std;
 
-static double activationFunction(const double& input)
+static double activationFunction(const long double& input)
 {
     if (input < 0.0) {
         return input * 0.01;
@@ -17,7 +17,7 @@ static double activationFunction(const double& input)
 
 }
 
-static double activationDerivative(const double& input)
+static double activationDerivative(const long double& input)
 {
     if (input > 0.0) {
         return 1.0;

@@ -56,58 +56,58 @@ FilterNet::FilterNet(const int c, const int h, const int w,
 
 }
 
-std::pair<double, double> FilterNet::filterSmallPool(
+std::pair<long double, long double> FilterNet::filterSmallPool(
         const int i, const int unit) const
 {
     return lastPool.at(i).at(unit).getActivation();
 }
 
-std::pair<double, double>
+std::pair<long double, long double>
     FilterNet::filterValue(const int i, const int index) const
 {
     return filtersTop.at(i).at(index).getActivation();
 }
 
-std::pair<double, double>
+std::pair<long double, long double>
     FilterNet::filterValueB(const int i, const int x, const int y) const
 {
     return filtersBottom.at(i).at(y * FILTERW + x).getActivation();
 }
 
-std::pair<double, double> FilterNet::_filterValueB(const int i,
+std::pair<long double, long double> FilterNet::_filterValueB(const int i,
                                                    const int u) const
 {
     return filtersBottom.at(i).at(u).getActivation();
 }
 
-std::pair<double, double> FilterNet::filterPoolB(const int i, const int x,
+std::pair<long double, long double> FilterNet::filterPoolB(const int i, const int x,
                                             const int y, const int REDW) const
 {
     return poolBottom.at(i).at(y * REDW + x).getActivation();
 }
 
 
-std::pair<double, double> FilterNet::_filterPoolB(const int i,
+std::pair<long double, long double> FilterNet::_filterPoolB(const int i,
                                                   const int u) const
 {
     return poolBottom.at(i).at(u).getActivation();
 }
 
-std::pair<double, double> FilterNet::poolValue(const int i, const int x,
+std::pair<long double, long double> FilterNet::poolValue(const int i, const int x,
                                         const int y, const int factor) const
 {
     return poolTop.at(i).at(y * FILTERW/factor + x).getActivation();
 }
 
 void FilterNet::buildPool(const int filter, const int row, const int col,
-                          const double &value, const int factor)
+                          const long double &value, const int factor)
 {
     poolTop.at(filter).
             at((row * FILTERW/factor) / factor + col / factor).setPool(value);
 }
 
-std::pair<double, double> FilterNet::buildPoolConv(const int filter,
-                  const int row, const int col, const double &value,
+std::pair<long double, long double> FilterNet::buildPoolConv(const int filter,
+                  const int row, const int col, const long double &value,
                                                    const int factor)
 {
     return poolBottom.at(filter).at(row * FILTERW/factor + col).
@@ -115,21 +115,21 @@ std::pair<double, double> FilterNet::buildPoolConv(const int filter,
 }
 
 void FilterNet::buildSecondPool(const int filter, const int index,
-                                const double &value)
+                                const long double &value)
 {
     lastPool.at(filter).at(index).setPool(value);
 }
 
-std::pair<double, double> FilterNet::secondConsume(
+std::pair<long double, long double> FilterNet::secondConsume(
         const int filter, const int row, const int col,
-                              const double &sum)
+                              const long double &sum)
 {
     return filtersBottom.at(filter).at(row * FILTERW + col).setActivation(sum);
 
 }
 
 
-double FilterNet::consume(MainWindow* pMW, const int filter,
+long double FilterNet::consume(MainWindow* pMW, const int filter,
         const int row, const int col, const std::vector<int>& value)
 {
 
@@ -137,14 +137,14 @@ double FilterNet::consume(MainWindow* pMW, const int filter,
     //value is 5 x 5 vector
 
     int offsetIntoWeights = filter * FILTERG * FILTERG;
-    double sum = 0;
+    long double sum = 0;
     int x = 0;
 
     for (const auto& iVal: value) {
         sum += pMW->getWeight(0, offsetIntoWeights + x++) * iVal;
     }
     sum += pMW->getBias(0, filter * FILTERH * FILTERW + row * FILTERW + col);
-    std::pair<double, double> activationE = (filtersTop.at(filter)).
+    std::pair<long double, long double> activationE = (filtersTop.at(filter)).
             at(row * FILTERW + col).setActivation(sum);
     entryDifferentials.push_back(activationE.second);
     return sum;
@@ -161,7 +161,7 @@ int FilterNet::getPixelValue(const int image, const int grid,
     return imageMap.at(image).at(grid).at(input);
 }
 
-double FilterNet::getEntryDifferential(const int index) const
+long double FilterNet::getEntryDifferential(const int index) const
 {
     return entryDifferentials.at(index);
 }

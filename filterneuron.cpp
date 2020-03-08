@@ -7,25 +7,26 @@
 FilterNeuron::FilterNeuron(const int l, const int i):layer(l), index(i)
 {}
 
-std::pair<double, double> FilterNeuron::setActivation(const double& sum)
+std::pair<long double, long double> FilterNeuron::setActivation(
+        const long double& sum)
 {
-    activation = std::pair<double, double>(activationFunction(sum),
+    activation = std::pair<long double, long double>(activationFunction(sum),
                                      activationDerivative(sum));
     inputSum = sum;
     return activation;
 }
 
-std::pair<double, double> FilterNeuron::getActivation() const
+std::pair<long double, long double> FilterNeuron::getActivation() const
 {
     return activation;
 }
 
-void FilterNeuron::setPool(const double& value)
+void FilterNeuron::setPool(const long double& value)
 {
-    activation = pair<double, double>(value, 0);
+    activation = pair<long double, long double>(value, 0);
 }
 
-double FilterNeuron::getInput() const
+long double FilterNeuron::getInput() const
 {
     return inputSum;
 }

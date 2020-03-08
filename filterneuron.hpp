@@ -5,18 +5,18 @@
 class FilterNeuron
 {
 private:
-    std::pair<double, double> activation;
+    std::pair<long double, long double> activation;
     const int layer;
     const int index;
-    double inputSum;
+    long double inputSum;
 
 
 public:
     FilterNeuron(const int l, const int i);
-    std::pair<double, double> setActivation(const double& sum);
-    std::pair<double, double> getActivation() const;
-    void setPool(const double& value);
-    double getInput() const;
+    std::pair<long double, long double> setActivation(const long double& sum);
+    std::pair<long double, long double> getActivation() const;
+    void setPool(const long double& value);
+    long double getInput() const;
     std::pair<int, int> getDetails() const;
 };
 

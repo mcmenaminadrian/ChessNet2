@@ -8,15 +8,15 @@ class FCLNeuron
 public:
     FCLNeuron(const int& i);
 private:
-    std::pair<double, double> activation;
+    std::pair<long double, long double> activation;
     const int index;
-    double inputSum;
+    long double inputSum;
 
 
 public:
-    std::pair<double, double> setActivation(const double& sum);
-    std::pair<double, double>getActivation() const;
-    double getInput() const;
+    std::pair<long double, long double> setActivation(const long double& sum);
+    std::pair<long double, long double>getActivation() const;
+    long double getInput() const;
 };
 
 #endif // FCLNEURON_H

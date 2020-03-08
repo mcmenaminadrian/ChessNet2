@@ -9,21 +9,21 @@ LearningRecord::LearningRecord(const QString& iFile, const QString& dFile):
 }
 
 void LearningRecord::addError(const std::vector<
-                              std::pair<double, double>> &errors,
-                              const std::vector<double>& activation)
+                              std::pair<long double, long double>> &errors,
+                              const std::vector<long double>& activation)
 {
     errRecord = errors;
     active = activation;
 }
 
-std::vector<double> LearningRecord::returnActivation() const
+std::vector<long double> LearningRecord::returnActivation() const
 {
     return active;
 }
 
-std::vector<double> LearningRecord::returnDelta() const
+std::vector<long double> LearningRecord::returnDelta() const
 {
-    std::vector<double> reply;
+    std::vector<long double> reply;
     reply.reserve(9);
     for (const auto& x: errRecord)
     {
@@ -32,9 +32,9 @@ std::vector<double> LearningRecord::returnDelta() const
     return reply;
 }
 
-std::vector<double> LearningRecord::returnError() const
+std::vector<long double> LearningRecord::returnError() const
 {
-    std::vector<double> reply;
+    std::vector<long double> reply;
     reply.reserve(9);
     for (const auto& x: errRecord)
     {

@@ -1,10 +1,10 @@
 #include "finalpoolcache.h"
 
-FinalPoolCache::FinalPoolCache(const int& pixNo, const double& val):
+FinalPoolCache::FinalPoolCache(const int& pixNo, const long double& val):
     value(val), selectedPixel(pixNo)
 {}
 
-double FinalPoolCache::getValue() const
+long double FinalPoolCache::getValue() const
 {
     return value;
 }

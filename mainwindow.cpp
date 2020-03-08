@@ -49,16 +49,16 @@ using namespace std;
 
 //functions for multithreading work
 
-void clearDeltas(vector<double>& fd)
+void clearDeltas(vector<long double>& fd)
 {
     fill(fd.begin(), fd.end(), 0.0);
 }
 
-void sumVectors(vector<double>& toUpdate, vector<double>& diffVector)
+void sumVectors(vector<long double>& toUpdate, vector<long double>& diffVector)
 {
-    auto summationVector = vector<double>(toUpdate.size(), 0.0);
+    auto summationVector = vector<long double>(toUpdate.size(), 0.0);
     transform(toUpdate.begin(), toUpdate.end(), diffVector.begin(),
-              summationVector.begin(), plus<double>());
+              summationVector.begin(), plus<long double>());
     toUpdate = summationVector;
     fill(diffVector.begin(), diffVector.end(), 0.0);
 }
@@ -69,27 +69,28 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow),
       filterNetwork(FILTERS, FILTERH, FILTERW, FILTERG)
 {
+    cerr << "Double is " << sizeof(double) << " Long Double is " << sizeof(long double) << endl;
     ui->setupUi(this);
     QObject::connect(this, SIGNAL(showJPEG(const QImage&)),
                      this, SLOT(updateJPEG(const QImage&)));
-    QObject::connect(this, SIGNAL(showLCD0(const double&)),
-                     this, SLOT(updateLCD0(const double&)));
-    QObject::connect(this, SIGNAL(showLCD1(const double&)),
-                     this, SLOT(updateLCD1(const double&)));
-    QObject::connect(this, SIGNAL(showLCD2(const double&)),
-                     this, SLOT(updateLCD2(const double&)));
-    QObject::connect(this, SIGNAL(showLCD3(const double&)),
-                     this, SLOT(updateLCD3(const double&)));
-    QObject::connect(this, SIGNAL(showLCD4(const double&)),
-                     this, SLOT(updateLCD4(const double&)));
-    QObject::connect(this, SIGNAL(showLCD5(const double&)),
-                     this, SLOT(updateLCD5(const double&)));
-    QObject::connect(this, SIGNAL(showLCD6(const double&)),
-                     this, SLOT(updateLCD6(const double&)));
-    QObject::connect(this, SIGNAL(showLCD7(const double&)),
-                     this, SLOT(updateLCD7(const double&)));
-    QObject::connect(this, SIGNAL(showLCD8(const double&)),
-                     this, SLOT(updateLCD8(const double&)));
+    QObject::connect(this, SIGNAL(showLCD0(const long double&)),
+                     this, SLOT(updateLCD0(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD1(const long double&)),
+                     this, SLOT(updateLCD1(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD2(const long double&)),
+                     this, SLOT(updateLCD2(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD3(const long double&)),
+                     this, SLOT(updateLCD3(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD4(const long double&)),
+                     this, SLOT(updateLCD4(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD5(const long double&)),
+                     this, SLOT(updateLCD5(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD6(const long double&)),
+                     this, SLOT(updateLCD6(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD7(const long double&)),
+                     this, SLOT(updateLCD7(const long double&)));
+    QObject::connect(this, SIGNAL(showLCD8(const long double&)),
+                     this, SLOT(updateLCD8(const long double&)));
     noRecords = true;
     noImages = true;
     qGS = new QGraphicsScene();
@@ -97,26 +98,27 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->setScene(qGS);
     ui->graphicsView_2->setScene(qFS);
     ui->pushButton_2->setDisabled(true);
-    fibreDeltas = vector<double>(200, 0);
-    secondFilterFibreDeltas = vector<double>(1800, 0);
-    firstFilterFibreDeltas = vector<double>(7200, 0);
-    uncorrectedSecondPoolBiases = vector<double>(1800, 0);
-    uncorrectedFirstPoolWeights = vector<double>(1250, 0);
-    uncorrectedFirstPoolBiases = vector<double>(7200, 0);
+    fibreDeltas = vector<long double>(200, 0);
+    secondFilterFibreDeltas = vector<long double>(1800, 0);
+    firstFilterFibreDeltas = vector<long double>(7200, 0);
+    uncorrectedSecondPoolBiases = vector<long double>(1800, 0);
+    uncorrectedFirstPoolWeights = vector<long double>(1250, 0);
+    uncorrectedFirstPoolBiases = vector<long double>(7200, 0);
     uncorrectedSecondPoolWeights =
-            vector<double>(200, 0.0);
-    finalWeights = vector<double>(1800, 0);
-    uncorrectedEntryWeights = vector<double>(1250, 0);
-    uncorrectedEntryBiases = vector<double>(7200, 0);
-    results = vector<pair<double, double>>(9, pair<double, double>(0, 0));
-    answers = vector<double>(9, 0);
+            vector<long double>(200, 0.0);
+    finalWeights = vector<long double>(1800, 0);
+    uncorrectedEntryWeights = vector<long double>(1250, 0);
+    uncorrectedEntryBiases = vector<long double>(7200, 0);
+    results = vector<pair<long double, long double>>(9,
+            pair<long double, long double>(0, 0));
+    answers = vector<long double>(9, 0);
     myPixMap = nullptr;
     filteredPixMap = nullptr;
 
     /*****GENERATE WEIGHTS*****/
     srand (time(NULL));
-//    generateWeights();
-//   saveWeights();
+ //   generateWeights();
+ //   saveWeights();
     /**************************/
 
     loadWeights();
@@ -143,7 +145,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->lcdNumber_9->setStyleSheet(
                 """QLCDNumber{background-color: black; color: red;}""");
 
-    errors = vector<double>(9, 0);
+    errors = vector<long double>(9, 0);
     sampleCount = 0;
     secondPoolMapped = false;
     firstPoolMapped = false;
@@ -157,49 +159,49 @@ MainWindow::~MainWindow()
     delete csvFile;
 }
 
-void MainWindow::updateLCD0(const double& number)
+void MainWindow::updateLCD0(const long double& number)
 {
-    ui->lcdNumber->display(number);
+    ui->lcdNumber->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD1(const double& number)
+void MainWindow::updateLCD1(const long double& number)
 {
-    ui->lcdNumber_2->display(number);
+    ui->lcdNumber_2->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD2(const double& number)
+void MainWindow::updateLCD2(const long double& number)
 {
-    ui->lcdNumber_3->display(number);
+    ui->lcdNumber_3->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD3(const double& number)
+void MainWindow::updateLCD3(const long double& number)
 {
-    ui->lcdNumber_4->display(number);
+    ui->lcdNumber_4->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD4(const double& number)
+void MainWindow::updateLCD4(const long double& number)
 {
-    ui->lcdNumber_5->display(number);
+    ui->lcdNumber_5->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD5(const double& number)
+void MainWindow::updateLCD5(const long double& number)
 {
-    ui->lcdNumber_6->display(number);
+    ui->lcdNumber_6->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD6(const double& number)
+void MainWindow::updateLCD6(const long double& number)
 {
-    ui->lcdNumber_7->display(number);
+    ui->lcdNumber_7->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD7(const double& number)
+void MainWindow::updateLCD7(const long double& number)
 {
-    ui->lcdNumber_8->display(number);
+    ui->lcdNumber_8->display(static_cast<double>(number));
 }
 
-void MainWindow::updateLCD8(const double& number)
+void MainWindow::updateLCD8(const long double& number)
 {
-    ui->lcdNumber_9->display(number);
+    ui->lcdNumber_9->display(static_cast<double>(number));
 }
 
 void MainWindow::updateJPEG(const QImage jpegFile)
@@ -237,7 +239,7 @@ void MainWindow::processData(const QString& datFile)
     QString str(entry);
     int insertPoint = 8;
     for (int i = 0; i < str.length(); i++) {
-        int x = static_cast<double>(str.at(i).digitValue());
+        int x = static_cast<long double>(str.at(i).digitValue());
         answers.at(insertPoint--) = x;
     }
     str.clear();
@@ -297,17 +299,17 @@ void MainWindow::processLine(const QString& lineIn)
     }
 
     feedForward(imageMap);
-    vector<double>::iterator itExpect = answers.begin();
+    vector<long double>::iterator itExpect = answers.begin();
 
-    vector<pair<double, double>> errDiff;
-    vector<double> activations;
+    vector<pair<long double, long double>> errDiff;
+    vector<long double> activations;
     errDiff.reserve(errors.size());
-    vector<double>::iterator itErr = errors.begin();
+    vector<long double>::iterator itErr = errors.begin();
     for (const auto& x: results)
     {
         activations.push_back(x.first);
-        double errVal = x.first - *itExpect++;
-        errDiff.push_back(pair<double, double>(errVal, x.second));
+        long double errVal = x.first - *itExpect++;
+        errDiff.push_back(pair<long double, long double>(errVal, x.second));
         *itErr++ += pow(errVal, 2);
     }
     records.at(sampleCount++).addError(errDiff, activations);
@@ -326,7 +328,7 @@ void MainWindow::saveWeights()
         outWeights << static_cast<uint>(weights.at(i).size());
         for (const auto& x: weights.at(i))
         {
-            outWeights << x;
+            outWeights.writeRawData((const char*)&x, sizeof(long double));
         }
     }
     outWeights << static_cast<uint>(biases.size());
@@ -335,7 +337,7 @@ void MainWindow::saveWeights()
         outWeights << static_cast<uint>(biases.at(i).size());
         for (const auto& x: biases.at(i))
         {
-            outWeights << x;
+            outWeights.writeRawData((const char*)&x, sizeof(long double));
         }
     }
 
@@ -355,11 +357,11 @@ void MainWindow::loadWeights()
     {
         uint weightsInLayer;
         inWeights >> weightsInLayer;
-        vector<double> readInWeights;
+        vector<long double> readInWeights;
         for (uint j = 0; j < weightsInLayer; j++)
         {
-            double weightIn;
-            inWeights >> weightIn;
+            long double weightIn;
+            inWeights.readRawData((char*)&weightIn, sizeof(long double));
             readInWeights.push_back(weightIn);
         }
         weights.push_back(readInWeights);
@@ -371,11 +373,11 @@ void MainWindow::loadWeights()
     {
         uint biasInLayer;
         inWeights >> biasInLayer;
-        vector<double> readInBias;
+        vector<long double> readInBias;
         for (uint j = 0; j < biasInLayer; j++)
         {
-            double biasIn;
-            inWeights >> biasIn;
+            long double biasIn;
+            inWeights.readRawData((char*)&biasIn, sizeof(long double));
             readInBias.push_back(biasIn);
         }
         biases.push_back(readInBias);
@@ -391,55 +393,55 @@ void MainWindow::generateWeights()
 {
     //image to top layer
 
-    vector<double> layerZeroWeights;
+    vector<long double> layerZeroWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
-            double r = static_cast <double>(rand());
-            double w = static_cast <double>(rand());
+            long double r = static_cast <long double>(rand());
+            long double w = static_cast <long double>(rand());
             r = (r - w)/2;
             r = r / RAND_MAX;
             layerZeroWeights.push_back(r);
         }
     }
     weights.push_back(layerZeroWeights);
-    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW, -0.5));
+    biases.push_back(vector<long double>(FILTERS * FILTERH * FILTERW, -0.5));
 
 
     //top layer to second layer
-    vector<double> layerOneWeights;
+    vector<long double> layerOneWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<FILTERG*FILTERG; g++) {
-            double r = static_cast <double>(rand());
-            double w = static_cast <double>(rand());
+            long double r = static_cast <long double>(rand());
+            long double w = static_cast <long double>(rand());
             r = (r - w)/2;
             r = r / RAND_MAX;
             layerOneWeights.push_back(r);
         }
     }
     weights.push_back(layerOneWeights);
-    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW, -0.5));
+    biases.push_back(vector<long double>(FILTERS * FILTERH * FILTERW, -0.5));
 
 
     //to second 'pool' layer
-    vector<double> poolLayerWeights;
+    vector<long double> poolLayerWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g<2*2; g++) {
-            double r = static_cast <double>(rand());
-            double w = static_cast <double>(rand());
+            long double r = static_cast <long double>(rand());
+            long double w = static_cast <long double>(rand());
             r = (r - w)/2;
             r = r / RAND_MAX;
             poolLayerWeights.push_back(r);
         }
     }
     weights.push_back(poolLayerWeights);
-    biases.push_back(vector<double>(FILTERS * FILTERH * FILTERW / 4, -0.5));
+    biases.push_back(vector<long double>(FILTERS * FILTERH * FILTERW / 4, -0.5));
 
     //to fully connected layer
-    vector<double> fclWeights;
+    vector<long double> fclWeights;
     for (auto f=0; f<FILTERS; f++) {
         for (auto g=0; g < 4 * CATS; g++) {
-            double r = static_cast <double>(rand());
-            double w = static_cast <double>(rand());
+            long double r = static_cast <long double>(rand());
+            long double w = static_cast <long double>(rand());
             r = (r - w)/2;
             r = r / RAND_MAX;
             fclWeights.push_back(r);
@@ -447,7 +449,7 @@ void MainWindow::generateWeights()
     }
 
     weights.push_back(fclWeights);
-    biases.push_back(vector<double>(CATS, -0.5));
+    biases.push_back(vector<long double>(CATS, -0.5));
 }
 
 void MainWindow::feedForward(const vector<vector<int>>& imgMap)
@@ -472,15 +474,15 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
 
     //second layer
     map<int, vector<int>>::iterator tpmIT;
-    vector<vector<pair<double, double>>> imagePoolAActivations;
+    vector<vector<pair<long double, long double>>> imagePoolAActivations;
     imagePoolAActivations.reserve(50);
     for (int i = 0; i < FILTERS; i++)
     {
-        vector<pair<double, double>> localPoolAActivations;
+        vector<pair<long double, long double>> localPoolAActivations;
         localPoolAActivations.reserve(144);
         for (int row = 0; row < FILTERH; row++) {
             for (int col = 0; col < FILTERW; col++) {
-                double sum = 0.0;
+                long double sum = 0.0;
                 int checking = -1;
                 int weightCount = 0;
                 for (int rowoffset = -FILTERG/2; rowoffset <= FILTERG/2;
@@ -523,7 +525,7 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
                             }
                         }
 
-                        pair<double, double> upperLayerActivation =
+                        pair<long double, long double> upperLayerActivation =
                                 filterNetwork.filterValue(
                                     i, col + coloffset +
                                     (row + rowoffset) * FILTERW);
@@ -552,7 +554,7 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
         firstLocalPoolCache.reserve(36);
         for (int row = 0; row <= FILTERH - SPAN; row += SPAN) {
             for (int col = 0; col <= FILTERW - SPAN; col+= SPAN) {
-                vector<double> cellValues;
+                vector<long double> cellValues;
                 for (int iRow = 0; iRow < SPAN; iRow++) {
                     for (int iCol = 0; iCol < SPAN; iCol++) {
                         cellValues.push_back(filterNetwork.filterValueB(
@@ -576,16 +578,16 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
 
     //convolve pool
     map<int, vector<int>>::iterator lpmIT;
-    vector<double> poolSums;
-    vector<vector<pair<double, double>>> imagePoolBActivations;
+    vector<long double> poolSums;
+    vector<vector<pair<long double, long double>>> imagePoolBActivations;
     imagePoolBActivations.reserve(50);
     int checking = -1;
     for (int filter = 0; filter < FILTERS; filter++) {
-        vector<pair<double, double>> localPoolBActivations;
+        vector<pair<long double, long double>> localPoolBActivations;
         localPoolBActivations.reserve(36);
         for (int row = 0; row <FILTERH/SPAN; row ++) {
             for (int col = 0; col < FILTERW/SPAN; col++) {
-                vector<double> cellValues;
+                vector<long double> cellValues;
                 for (int iRow = 0; iRow < SPAN; iRow++) {
                     for (int iCol = 0; iCol < SPAN; iCol++) {                       
                         if (!secondPoolMapped) {
@@ -625,7 +627,7 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
                     }
                 }
                 int index = 0;
-                double sum = 0.0;
+                long double sum = 0.0;
                 for (const auto& val: cellValues) {
                     sum += val * getWeight(2, index++);
                 }
@@ -655,7 +657,7 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
         int indexInsert = 0;
         for (int row = 0; row <= REDH - SECOND_SPAN; row += SECOND_SPAN) {
             for (int col = 0; col <= REDW - SECOND_SPAN; col+= SECOND_SPAN) {
-                vector<double> cellValues;
+                vector<long double> cellValues;
                 for (int iRow = 0; iRow < SECOND_SPAN; iRow++) {
                     for (int iCol = 0; iCol < SECOND_SPAN; iCol++) {
                         cellValues.push_back(filterNetwork.filterPoolB(
@@ -682,7 +684,7 @@ void MainWindow::feedForward(const vector<vector<int>>& imgMap)
 
     for (int fcl = 0; fcl < CATS; fcl++)
     {
-        double sum = 0.0;
+        long double sum = 0.0;
         for (int filter = 0; filter < FILTERS; filter++) {
             for (int smallPool = 0; smallPool < 4; smallPool++) {
                 sum += filterNetwork.filterSmallPool(filter, smallPool).first *
@@ -723,7 +725,7 @@ void MainWindow::drawFilteredImage()
     for (int filter = 0; filter < FILTERS; filter++) {
         for (int y = 0; y < FILTERH; y++) {
             for (int x = 0; x < FILTERW; x++) {
-                pair<double, double> activated =
+                pair<long double, long double> activated =
                     filterNetwork.filterValue(filter, x + y * FILTERW);
                 int pixVal = static_cast<int>(activated.first);
                 int pixY = filter/10 * FILTERH + 10*(filter/10) + y;
@@ -736,7 +738,7 @@ void MainWindow::drawFilteredImage()
 
         for (int y = 0; y < FILTERH; y++) {
             for (int x = 0; x < FILTERW; x++) {
-                pair<double, double> activated =
+                pair<long double, long double> activated =
                     filterNetwork.filterValueB(filter, x, y);
                 int pixVal = static_cast<int>(activated.first);
                 int pixY = filter/10 * FILTERH + 10*(filter/10) + y + secondOffset;
@@ -799,24 +801,24 @@ void MainWindow::on_pushButton_clicked()
 
 }
 
-double MainWindow::getWeight(const int &indexA, const int &indexB) const
+long double MainWindow::getWeight(const int &indexA, const int &indexB) const
 {
     return weights.at(indexA).at(indexB);
 }
 
-double MainWindow::getBias(const int &indexA, const int &indexB) const
+long double MainWindow::getBias(const int &indexA, const int &indexB) const
 {
     return biases.at(indexA).at(indexB);
 }
 
 void MainWindow::setWeight(const int &indexA, const int &indexB,
-                           const double &weight)
+                           const long double &weight)
 {
     weights.at(indexA).at(indexB) = weight;
 }
 
 void MainWindow::setBias(const int &indexA, const int &indexB,
-                         const double &bias)
+                         const long double &bias)
 {
     biases.at(indexA).at(indexB) = bias;
 }
@@ -826,7 +828,7 @@ void MainWindow::calculateDeltas()
 
     if (deltas.size() > 0)
     {
-        fill(deltas.begin(), deltas.end(), vector<double>(9, 0));
+        fill(deltas.begin(), deltas.end(), vector<long double>(9, 0));
         int xCount = 0;
         for (const auto& x: records)
         {
@@ -869,7 +871,7 @@ void MainWindow::on_pushButton_2_clicked()
         //Take delta for every input
         for (int repeat = 0; repeat < 4000; repeat++)
         {
-            double eta = _eta * (1/log(repeat + 2));
+            long double eta = _eta * (1/log(repeat + 2));
             ui->graphicsView_2->scene()->clear();
             ui->graphicsView->scene()->clear();
             sampleCount = 0;
@@ -893,16 +895,16 @@ void MainWindow::on_pushButton_2_clicked()
 
             calculateDeltas();
             uint numOut = 0;
-            double totalError = accumulate(errors.begin(), errors.end(), 0.0);
+            long double totalError = accumulate(errors.begin(), errors.end(), 0.0);
             cout << "Total Error is " << totalError << endl;
             //final layer
-            vector<double> finalBiases = biases.at(3);
-            vector<double>::iterator _itErr = errors.begin();
-            vector<double> averageErrors;
-            vector<double> avDeltas;
+            vector<long double> finalBiases = biases.at(3);
+            vector<long double>::iterator _itErr = errors.begin();
+            vector<long double> averageErrors;
+            vector<long double> avDeltas;
             for (uint i = 0; i < 9; i++)
             {
-                double totalDelta = 0;
+                long double totalDelta = 0;
                 for (const auto& x: deltas)
                 {
                     totalDelta += x.at(i);
@@ -926,12 +928,12 @@ void MainWindow::on_pushButton_2_clicked()
             fill(firstFilterFibreDeltas.begin(), firstFilterFibreDeltas.end(), 0);
             vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
                     poolFiltersCache.begin();
-            vector<vector<vector<pair<double, double>>>>::iterator
+            vector<vector<vector<pair<long double, long double>>>>::iterator
                     poolBIterator =
                     secondPoolActivationsCache.begin();
             vector<vector<vector<FinalPoolCache>>>::iterator tpIterator =
                     topPoolFiltersCache.begin();
-            vector<vector<vector<pair<double, double>>>>::iterator
+            vector<vector<vector<pair<long double, long double>>>>::iterator
                     poolAIterator =
                     firstPoolActivationsCache.begin();
 
@@ -942,25 +944,25 @@ void MainWindow::on_pushButton_2_clicked()
             int imageNumber = 0;
             for (const auto& image: records)
             {
-                vector<double> imageDeltas = image.returnDelta();
-                vector<double> imageErrors = image.returnError();
+                vector<long double> imageDeltas = image.returnDelta();
+                vector<long double> imageErrors = image.returnError();
                 vector<vector<FinalPoolCache>> imageFPCache = *fpcIterator++;
                 for (int i = 0; i < 9; i++)
                 {
-                    double errorImg = imageErrors.at(i);
+                    long double errorImg = imageErrors.at(i);
                     if (abs(errorImg) < 0.4)
                     {
                         continue;
                     }
-                    double totalDelta = imageDeltas.at(i);
+                    long double totalDelta = imageDeltas.at(i);
                     finalBiases.at(i) -= totalDelta * eta;
                     for (int j = 0; j < 200; j++)
                     {
-                        double localDelta = totalDelta *
+                        long double localDelta = totalDelta *
                                 weights.at(3).at(i * 200 + j);
                         fibreDeltas.at(j) += localDelta;
-                        double act = imageFPCache.at(j/4).at(j%4).getValue();
-                        double diff = act * localDelta * eta;
+                        long double act = imageFPCache.at(j/4).at(j%4).getValue();
+                        long double diff = act * localDelta * eta;
                         finalWeights.at(i * 200 + j) -= diff;
                     }
                 }
@@ -968,22 +970,22 @@ void MainWindow::on_pushButton_2_clicked()
                 //back propagate the error
                 //one neuron at a time
                 //imagePoolBCache caches second layer of 6 x 6 filters
-                vector<vector<pair<double, double>>> imagePoolBCache =
+                vector<vector<pair<long double, long double>>> imagePoolBCache =
                         *poolBIterator++;
                 vector<vector<FinalPoolCache>> prevIActs = *tpIterator;
                 for (int i = 0; i < 50; i++)
                 {
                     vector<FinalPoolCache> prevAct = prevIActs.at(i);
-                    vector<pair<int, double>> fpcCorrections;
+                    vector<pair<int, long double>> fpcCorrections;
                     //localCache tells us which neurons make the pool
                     vector<FinalPoolCache> localCache = imageFPCache.at(i);
                     //per fibre activations in localActivations (this layer)
-                    vector<pair<double, double>> localActivations =
+                    vector<pair<long double, long double>> localActivations =
                             imagePoolBCache.at(i);
                     int cacheCount = 0;
                     for (const auto& x: localCache)
                     {
-                        fpcCorrections.push_back(pair<int, double>
+                        fpcCorrections.push_back(pair<int, long double>
                             (x.getPixel(),
                              localActivations.at(x.getPixel()).second *
                                 fibreDeltas.at(i * 4 + cacheCount++)));
@@ -1003,11 +1005,11 @@ void MainWindow::on_pushButton_2_clicked()
                             {
                                 continue;
                             }
-                            double localDelta = topNeuron.second *
+                            long double localDelta = topNeuron.second *
                                     weights.at(2).at(i * 4 + j);
                             secondFilterFibreDeltas.at(i * 36 + *y) +=
                                     localDelta;
-                            double neuroAct = prevAct.at(*y).getValue();
+                            long double neuroAct = prevAct.at(*y).getValue();
                             uncorrectedSecondPoolWeights.at(i * 4 + j) -=
                                     neuroAct * localDelta * eta;
                         }
@@ -1020,18 +1022,18 @@ void MainWindow::on_pushButton_2_clicked()
                 //bigger filter
 
                 vector<vector<FinalPoolCache>> imageTPCache = *tpIterator++;
-                vector<vector<pair<double, double>>> imagePoolACache =
+                vector<vector<pair<long double, long double>>> imagePoolACache =
                         *poolAIterator++;
                 for (int i = 0; i < 50; i++)
                 {
-                    vector<pair<int, double>> spCorrections;
+                    vector<pair<int, long double>> spCorrections;
                     vector<FinalPoolCache> localTPCache = imageTPCache.at(i);
-                    vector<pair<double, double>> localPActivations =
+                    vector<pair<long double, long double>> localPActivations =
                             imagePoolACache.at(i);
                     int cacheCount = 0;
                     for (const auto& x: localTPCache)
                     {                       
-                        spCorrections.push_back(pair<int, double>
+                        spCorrections.push_back(pair<int, long double>
                             (x.getPixel(),
                              localPActivations.at(x.getPixel()).second *
                                 secondFilterFibreDeltas.at(i * 36 +
@@ -1050,11 +1052,11 @@ void MainWindow::on_pushButton_2_clicked()
                             {
                                 continue;
                             }
-                            double localDelta = topNeuron.second *
+                            long double localDelta = topNeuron.second *
                                     weights.at(1).at(i * 25 + j);
                             firstFilterFibreDeltas.at(i * 144 + *y) +=
                                     localDelta;
-                            double neuroAct = imagePoolACache.at(i).at(*y).first;
+                            long double neuroAct = imagePoolACache.at(i).at(*y).first;
                             uncorrectedFirstPoolWeights.at(i * 25 + j) -=
                                     neuroAct * localDelta * eta;
                         }
@@ -1070,19 +1072,19 @@ void MainWindow::on_pushButton_2_clicked()
                     for (int j = 0; j < 144; j++)
                     {
                         //get error at neuron
-                        double deltaE = firstFilterFibreDeltas.at(i * 144 + j);
-                        double differentiate =
+                        long double deltaE = firstFilterFibreDeltas.at(i * 144 + j);
+                        long double differentiate =
                             filterNetwork.
                                 getEntryDifferential(imageNumber * 50 * 144 +
                                                      i * 144 + j);
-                        double rawCorrection = deltaE * differentiate;
+                        long double rawCorrection = deltaE * differentiate;
                         if (rawCorrection == 0)
                         {
                             continue;
                         }
                         for (int k = 0; k < 25; k++)
                         {
-                            double localDelta = rawCorrection *
+                            long double localDelta = rawCorrection *
                                     weights.at(0).at(i * 25 + k);
 
                             uncorrectedEntryWeights.at(i * 25 + k) -=

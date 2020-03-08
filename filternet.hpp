@@ -11,31 +11,34 @@ class FilterNet
 {
 public:
     FilterNet(const int c, const int h, const int w, const int g);
-    double consume(MainWindow* pMW, const int filter, const int row,
+    long double consume(MainWindow* pMW, const int filter, const int row,
                  const int col, const std::vector<int>& values);
-    std::pair<double, double> secondConsume(const int filter,
+    std::pair<long double, long double> secondConsume(const int filter,
                        const int row, const int col,
-                       const double& sum);
+                       const long double& sum);
     void buildPool(const int filter, const int row, const int col,
-                   const double& value, const int factor);
-    std::pair<double, double> buildPoolConv(const int filter, const int row,
-                       const int col, const double& value, const int factor);
+                   const long double& value, const int factor);
+    std::pair<long double, long double> buildPoolConv(const int filter,
+                       const int row,
+                       const int col, const long double& value,
+                       const int factor);
     void buildSecondPool(const int filter, const int position,
-                         const double& value);
-    std::pair<double, double>
+                         const long double& value);
+    std::pair<long double, long double>
         filterValue(const int i, const int index) const;
-    std::pair<double, double>
+    std::pair<long double, long double>
         filterValueB(const int i, const int x, const int y) const;
-    std::pair<double, double>
+    std::pair<long double, long double>
         _filterValueB(const int i, const int u) const;
-    std::pair<double, double> poolValue(const int i, const int x,
+    std::pair<long double, long double> poolValue(const int i, const int x,
                                         const int y, const int factor) const;
-    std::pair<double, double> filterPoolB(const int i, const int x,
+    std::pair<long double, long double> filterPoolB(const int i, const int x,
                                           const int y, const int redw) const;
-    std::pair<double, double> _filterPoolB(const int i, const int u) const;
-    std::pair<double, double>
+    std::pair<long double, long double>
+        _filterPoolB(const int i, const int u) const;
+    std::pair<long double, long double>
         filterSmallPool(const int i, const int unit) const;
-    double getEntryDifferential(const int index) const;
+    long double getEntryDifferential(const int index) const;
     void flush();
     void addImageMap(const std::vector<std::vector<int>>& imgMap);
     int getPixelValue(const int image, const int filter,
@@ -49,7 +52,7 @@ private:
 
     //two top level filters, then pooling (and filter)
     //then final pool
-    std::vector<double> entryDifferentials;
+    std::vector<long double> entryDifferentials;
     std::vector<std::vector<FilterNeuron>> filtersTop;
     std::vector<std::vector<FilterNeuron>> filtersBottom;
     std::vector<std::vector<FilterNeuron>> poolTop;
