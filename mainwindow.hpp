@@ -9,6 +9,7 @@
 #include <utility>
 #include <map>
 #include <set>
+#include <mutex>
 #include "filternet.hpp"
 #include "fclneuron.h"
 #include "learningrecord.h"
@@ -104,8 +105,17 @@ private:
     std::vector<long double> uncorrectedFirstPoolBiases;
     std::vector<long double> uncorrectedEntryWeights;
     std::vector<long double> uncorrectedEntryBiases;
+    std::mutex biasZeroLock;
+    std::mutex biasOneLock;
+    std::mutex biasTwoLock;
+    std::mutex biasThreeLock;
+    std::mutex weightZeroLock;
+    std::mutex weightOneLock;
+    std::mutex weightTwoLock;
+    std::mutex weightThreeLock;
     std::vector<std::pair<long double, long double>> results;
     std::vector<long double> answers;
+    void executeThread(const long double& eta, const int imgNumber);
 
     long double _eta = 0.001;
 
