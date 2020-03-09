@@ -97,6 +97,7 @@ private:
     std::vector<long double> secondFilterFibreDeltas;
     std::vector<long double> firstFilterFibreDeltas;
     std::vector<long double> finalWeights;
+    std::vector<long double> finalBiases;
     std::vector<long double> uncorrectedSecondPoolWeights;
     std::vector<long double> uncorrectedSecondPoolBiases;
     std::vector<long double> uncorrectedFirstPoolWeights;

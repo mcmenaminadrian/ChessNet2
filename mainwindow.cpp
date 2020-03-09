@@ -54,13 +54,20 @@ void clearDeltas(vector<long double>& fd)
     fill(fd.begin(), fd.end(), 0.0);
 }
 
-void sumVectors(vector<long double>& toUpdate, vector<long double>& diffVector)
+void sumVectors(vector<long double>& toUpdate, vector<long double>& diffVector,
+                vector<long double>& biasesToUpdate, vector<long double>&
+                diffBiases)
 {
     auto summationVector = vector<long double>(toUpdate.size(), 0.0);
     transform(toUpdate.begin(), toUpdate.end(), diffVector.begin(),
               summationVector.begin(), plus<long double>());
     toUpdate = summationVector;
     fill(diffVector.begin(), diffVector.end(), 0.0);
+    auto summationBiases = vector<long double>(biasesToUpdate.size(), 0.0);
+    transform(biasesToUpdate.begin(), biasesToUpdate.end(),
+              diffBiases.begin(), summationBiases.begin(),
+              plus<long double>());
+    fill(diffBiases.begin(), diffBiases.end(), 0.0);
 }
 
 
@@ -98,6 +105,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->setScene(qGS);
     ui->graphicsView_2->setScene(qFS);
     ui->pushButton_2->setDisabled(true);
+    finalBiases = vector<long double>(9, 0);
     fibreDeltas = vector<long double>(200, 0);
     secondFilterFibreDeltas = vector<long double>(1800, 0);
     firstFilterFibreDeltas = vector<long double>(7200, 0);
@@ -898,7 +906,6 @@ void MainWindow::on_pushButton_2_clicked()
             long double totalError = accumulate(errors.begin(), errors.end(), 0.0);
             cout << "Total Error is " << totalError << endl;
             //final layer
-            vector<long double> finalBiases = biases.at(3);
             vector<long double>::iterator _itErr = errors.begin();
             vector<long double> averageErrors;
             vector<long double> avDeltas;
@@ -1020,7 +1027,6 @@ void MainWindow::on_pushButton_2_clicked()
                 }
 
                 //bigger filter
-
                 vector<vector<FinalPoolCache>> imageTPCache = *tpIterator++;
                 vector<vector<pair<long double, long double>>> imagePoolACache =
                         *poolAIterator++;
@@ -1091,7 +1097,6 @@ void MainWindow::on_pushButton_2_clicked()
                                     filterNetwork.getPixelValue(
                                         imageNumber, j, k) *
                                     localDelta * eta;
-
                         }
                         uncorrectedEntryBiases.at(i * 144 + j) -=
                                 rawCorrection * eta;
@@ -1109,21 +1114,25 @@ void MainWindow::on_pushButton_2_clicked()
                 clearSFFD.join();
                 clearFFFD.join();
 
-
                 imageNumber++;
             }
 
-
-
-
             std::thread sumZero(sumVectors, std::ref(weights.at(0)),
-                                std::ref(uncorrectedEntryWeights));
+                                std::ref(uncorrectedEntryWeights),
+                                std::ref(biases.at(0)),
+                                std::ref(uncorrectedEntryBiases));
             std::thread sumOne(sumVectors, std::ref(weights.at(1)),
-                               std::ref(uncorrectedFirstPoolWeights));
+                               std::ref(uncorrectedFirstPoolWeights),
+                               std::ref(biases.at(1)),
+                               std::ref(uncorrectedFirstPoolBiases));
             std::thread sumTwo(sumVectors, std::ref(weights.at(2)),
-                               std::ref(uncorrectedSecondPoolWeights));
+                               std::ref(uncorrectedSecondPoolWeights),
+                               std::ref(biases.at(2)),
+                               std::ref(uncorrectedSecondPoolBiases));
             std::thread sumThree(sumVectors, std::ref(weights.at(3)),
-                                 std::ref(finalWeights));
+                                 std::ref(finalWeights),
+                                 std::ref(biases.at(3)),
+                                 std::ref(finalBiases));
             filterNetwork.flush();
             int resLength = poolFiltersCache.size();
             poolFiltersCache.clear();
@@ -1141,10 +1150,6 @@ void MainWindow::on_pushButton_2_clicked()
             firstPoolMapped = false;
             firstPoolMap.clear();
             secondPoolMap.clear();
-            biases.at(0) = uncorrectedEntryBiases;
-            biases.at(1) = uncorrectedFirstPoolBiases;
-            biases.at(2) = uncorrectedSecondPoolBiases;
-            biases.at(3) = finalBiases;
             sumTwo.join();
             sumThree.join();
             sumZero.join();
@@ -1152,6 +1157,4 @@ void MainWindow::on_pushButton_2_clicked()
             saveWeights();
         }
     }
-
-
 }
