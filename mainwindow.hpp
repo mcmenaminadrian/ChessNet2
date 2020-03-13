@@ -94,9 +94,6 @@ private:
     bool firstPoolMapped;
     std::map<int, std::vector<int>> secondPoolMap;
     std::map<int, std::vector<int>> firstPoolMap;
-    std::vector<long double> fibreDeltas;
-    std::vector<long double> secondFilterFibreDeltas;
-    std::vector<long double> firstFilterFibreDeltas;
     std::vector<long double> finalWeights;
     std::vector<long double> finalBiases;
     std::vector<long double> uncorrectedSecondPoolWeights;

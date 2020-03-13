@@ -50,6 +50,8 @@ using namespace std;
 
 //functions for multithreading work
 
+int genRandom(const int i){return std::rand()%i;}
+
 void clearDeltas(vector<long double>& fd)
 {
     fill(fd.begin(), fd.end(), 0.0);
@@ -68,7 +70,6 @@ void sumVectors(vector<long double>& toUpdate, vector<long double>& diffVector,
     transform(biasesToUpdate.begin(), biasesToUpdate.end(),
               diffBiases.begin(), summationBiases.begin(),
               plus<long double>());
-    fill(diffBiases.begin(), diffBiases.end(), 0.0);
 }
 
 
@@ -106,7 +107,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->graphicsView->setScene(qGS);
     ui->graphicsView_2->setScene(qFS);
     ui->pushButton_2->setDisabled(true);
-    finalBiases = vector<long double>(9, 0);
 
     uncorrectedSecondPoolBiases = vector<long double>(1800, 0);
     uncorrectedFirstPoolWeights = vector<long double>(1250, 0);
@@ -931,25 +931,29 @@ void MainWindow::on_pushButton_2_clicked()
             //random shuffle the images and use the first five
             vector<int> imageNumbers(records.size());
             iota(imageNumbers.begin(), imageNumbers.end(), 0);
-            random_shuffle(imageNumbers.begin(), imageNumbers.end());
+            random_shuffle(imageNumbers.begin(), imageNumbers.end(),
+                           genRandom);
+            finalBiases =
+                    vector<long double>(biases.at(3).size(), 0);
+            uncorrectedSecondPoolBiases =
+                    vector<long double>(biases.at(2).size(), 0);
+            uncorrectedFirstPoolBiases =
+                    vector<long double>(biases.at(1).size(), 0);
+            uncorrectedEntryBiases =
+                    vector<long double>(biases.at(0).size(), 0);
 
-            uncorrectedSecondPoolBiases = biases.at(2);
-            uncorrectedFirstPoolBiases = biases.at(1);
-            uncorrectedEntryBiases = biases.at(0);
+            vector<std::thread> threadEx;
 
-            vector<std::thread> threadEx(5);
-
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 10; i++)
             {
                 threadEx.push_back(std::thread(&MainWindow::executeThread,
-                                               this, std::ref(eta), i));
+                                               this, std::ref(eta),
+                                               imageNumbers.at(i)));
             }
-            for (int i = 0; i < 5; i++)
+            for (auto& tx: threadEx)
             {
-                threadEx.at(i).join();
+                tx.join();
             }
-
-
 
             std::thread sumZero(sumVectors, std::ref(weights.at(0)),
                                 std::ref(uncorrectedEntryWeights),
@@ -998,21 +1002,21 @@ void MainWindow::executeThread(const long double& eta, const int imageNumber)
 {
     auto image = records.at(imageNumber);
 
-    fibreDeltas = vector<long double>(200, 0);
-    secondFilterFibreDeltas = vector<long double>(1800, 0);
-    firstFilterFibreDeltas = vector<long double>(7200, 0);
+    vector<long double> fibreDeltas = vector<long double>(200, 0);
+    vector<long double> secondFilterFibreDeltas = vector<long double>(1800, 0);
+    vector<long double> firstFilterFibreDeltas = vector<long double>(7200, 0);
 
 
     vector<vector<vector<FinalPoolCache>>>::iterator fpcIterator =
-            poolFiltersCache.begin();
+            poolFiltersCache.begin() + imageNumber;
     vector<vector<vector<pair<long double, long double>>>>::iterator
             poolBIterator =
-            secondPoolActivationsCache.begin();
+            secondPoolActivationsCache.begin() + imageNumber;
     vector<vector<vector<FinalPoolCache>>>::iterator tpIterator =
-            topPoolFiltersCache.begin();
+            topPoolFiltersCache.begin() + imageNumber;
     vector<vector<vector<pair<long double, long double>>>>::iterator
             poolAIterator =
-            firstPoolActivationsCache.begin();
+            firstPoolActivationsCache.begin() + imageNumber;
 
 
 
@@ -1023,7 +1027,7 @@ void MainWindow::executeThread(const long double& eta, const int imageNumber)
     for (int i = 0; i < 9; i++)
     {
         long double errorImg = imageErrors.at(i);
-        if (abs(errorImg) < 0.4)
+        if (abs(errorImg) < 0.1)
         {
             continue;
         }
